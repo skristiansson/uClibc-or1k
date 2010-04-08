@@ -24,7 +24,6 @@
 #include "pagecopy.h"
 #include "_memcpy_fwd.c"
 
-
 void *memcpy (void *dstpp, const void *srcpp, size_t len)
 {
   unsigned long int dstp = (long int) dstpp;

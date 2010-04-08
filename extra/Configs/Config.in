@@ -90,6 +90,10 @@ config TARGET_nios
 config TARGET_nios2
 	bool "nios2"
 
+config TARGET_or32
+     bool "or32"
+
+
 config TARGET_powerpc
 	bool "powerpc"
 
@@ -186,6 +190,11 @@ endif
 if TARGET_mips
 source "extra/Configs/Config.mips"
 endif
+
+if TARGET_or32
+source "extra/Configs/Config.or32"
+endif
+
 
 if TARGET_powerpc
 source "extra/Configs/Config.powerpc"

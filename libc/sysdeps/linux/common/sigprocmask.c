@@ -11,7 +11,7 @@
 
 #if defined __USE_POSIX
 #include <signal.h>
-
+#include <errno.h>
 #undef sigprocmask
 
 

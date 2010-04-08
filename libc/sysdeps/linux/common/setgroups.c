@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <grp.h>
+#include <errno.h>
 
 #ifdef __USE_BSD
 

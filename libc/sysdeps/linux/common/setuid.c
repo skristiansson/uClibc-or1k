@@ -10,6 +10,7 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 #include <bits/wordsize.h>
+#include <errno.h>
 
 #if (__WORDSIZE == 32 && defined(__NR_setuid32)) || __WORDSIZE == 64
 # ifdef __NR_setuid32

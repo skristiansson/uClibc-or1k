@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <grp.h>
+#include <errno.h>
 
 
 #if defined(__NR_getgroups32)
