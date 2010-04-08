@@ -19,6 +19,8 @@
 
 #include <errno.h>
 
+int __syscall_error (int err_no);
+
 /* This routine is jumped to by all the syscall handlers, to stash
  * an error number into errno.  */
 int __syscall_error (int err_no)

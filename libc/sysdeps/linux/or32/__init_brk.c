@@ -6,6 +6,9 @@
 
 void * ___brk_addr = 0;
 
+int __init_brk (void);
+void *_brk(void *ptr);
+
 #define __NR__brk __NR_brk
 _syscall1(void *, _brk, void *, ptr);
 
