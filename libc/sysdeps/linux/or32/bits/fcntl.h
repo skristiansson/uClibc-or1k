@@ -42,13 +42,14 @@
 #define O_ASYNC		020000
 
 #ifdef __USE_GNU
-# define O_DIRECTORY	040000	/* Must be a directory.	 */
-# define O_NOFOLLOW	0100000	/* Do not follow links.	 */
-# define O_STREAMING	04000000/* streaming access */
+# define O_DIRECT	 040000	/* Direct disk access.	*/
+# define O_DIRECTORY	0200000	/* Must be a directory.	 */
+# define O_NOFOLLOW	0400000	/* Do not follow links.	 */
+# define O_NOATIME     01000000 /* Do not set atime.  */
 #endif
 
 #ifdef __USE_LARGEFILE64
-# define O_LARGEFILE	0200000
+# define O_LARGEFILE	0100000
 #endif
 
 /* For now Linux has synchronisity options for data and read operations.
