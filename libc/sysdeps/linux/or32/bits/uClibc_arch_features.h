@@ -1,5 +1,3 @@
-#include <bits/errno_values.h>
-
 /*
  * Track misc arch-specific features that aren't config options
  */
