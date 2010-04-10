@@ -3,6 +3,10 @@
 #ifndef _BITS_STAT_STRUCT_H
 #define _BITS_STAT_STRUCT_H
 
+#ifndef _LIBC
+#error bits/kernel_stat.h is for internal uClibc use only!
+#endif
+
 #if 0
 /* __PHX__ :: cleanup
  *  
