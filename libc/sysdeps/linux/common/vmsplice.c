@@ -9,6 +9,7 @@
 
 #include <sys/syscall.h>
 #include <fcntl.h>
+#include <sys/uio.h>
 
 #ifdef __NR_vmsplice
 _syscall4(ssize_t, vmsplice, int, __fdout, const struct iovec *, __iov,
