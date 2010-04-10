@@ -303,14 +303,7 @@ void __exit_handler(int status)
 #endif
 
 #ifdef L_exit
-// Fix for the following error when compiling: undefined reference to `__stdio_term' 
-//extern void weak_function _stdio_term(void) attribute_hidden;
-// Added jb 220409
-static void _stdio_term(void);
-static void _stdio_term(void)
-{
-}
-
+extern void weak_function _stdio_term(void) attribute_hidden;
 attribute_hidden void (*__exit_cleanup) (int) = 0;
 __UCLIBC_MUTEX_INIT(__atexit_lock, PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP);
 
