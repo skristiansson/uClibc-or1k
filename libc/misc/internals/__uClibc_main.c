@@ -65,9 +65,9 @@ void internal_function _dl_aux_init (ElfW(auxv_t) *av);
  * Prototypes.
  */
 extern int *weak_const_function __errno_location(void);
-libc_hidden_proto(__errno_location)
+//libc_hidden_proto(__errno_location)
 extern int *weak_const_function __h_errno_location(void);
-libc_hidden_proto(__h_errno_location)
+//libc_hidden_proto(__h_errno_location)
 
 extern void weak_function _stdio_init(void) attribute_hidden;
 #ifdef __UCLIBC_HAS_LOCALE__
@@ -383,8 +383,8 @@ void __uClibc_main(int (*main)(int, char **, char **), int argc,
 	*(__errno_location()) = 0;
 
     /* Set h_errno to 0 as well */
-    if (likely(__h_errno_location!=NULL))
-	*(__h_errno_location()) = 0;
+/*    if (likely(__h_errno_location!=NULL))
+	*(__h_errno_location()) = 0;*/
 
     /*
      * Finally, invoke application's main and then exit.
