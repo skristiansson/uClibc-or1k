@@ -7,71 +7,53 @@
 #error bits/kernel_stat.h is for internal uClibc use only!
 #endif
 
-#if 0
-/* __PHX__ :: cleanup
- *  
- * This is for compatibility with old sys_stat system call.
- * I don't think it's used anywhere in or32, but i'll just leave
- * it here for a while...
- */
-struct __old_kernel_stat {
-	unsigned short st_dev;
-	unsigned short st_ino;
-	unsigned short st_mode;
-	unsigned short st_nlink;
-	unsigned short st_uid;
-	unsigned short st_gid;
-	unsigned short st_rdev;
-	unsigned long  st_size;
-	unsigned long  st_atime;
-	unsigned long  st_mtime;
-	unsigned long  st_ctime;
-};
-#endif
-
 struct kernel_stat {
-        __kernel_dev_t  st_dev;
-	__kernel_ino_t  st_ino;
-	__kernel_mode_t st_mode;
-	__kernel_nlink_t st_nlink;
-	__kernel_uid_t  st_uid;
-	__kernel_gid_t  st_gid;
-	__kernel_dev_t  st_rdev;
-	__kernel_off_t  st_size;
-	unsigned long  	st_blksize;
-	unsigned long  	st_blocks;
-        struct timespec st_atim;
-        struct timespec st_mtim;
-        struct timespec st_ctim;
-/*	unsigned long  	st_atime;
-	unsigned long  	__unused1;
-	unsigned long  	st_mtime;
-	unsigned long  	__unused2;
-	unsigned long  	st_ctime;*/
-	unsigned long  	__unused3;
-	unsigned long  	__unused4;
-	unsigned long  	__unused5;
+    unsigned long	st_dev;		/* Device.  */
+    unsigned long	st_ino;		/* File serial number.  */
+    unsigned int	st_mode;	/* File mode.  */
+    unsigned int	st_nlink;	/* Link count.  */
+    unsigned int	st_uid;		/* User ID of the file's owner.  */
+    unsigned int	st_gid;		/* Group ID of the file's group. */
+    unsigned long	st_rdev;	/* Device number, if device.  */
+    unsigned long	__pad1;
+    long		st_size;	/* Size of file, in bytes.  */
+    int		        st_blksize;	/* Optimal block size for I/O.  */
+    int		        __pad2;
+    long		st_blocks;	/* Number 512-byte blocks allocated. */
+    struct timespec     st_atim;
+    struct timespec     st_mtim;
+    struct timespec     st_ctim;
+    /*
+    unsigned long  	st_atime;
+    unsigned long  	__unused1;
+    unsigned long  	st_mtime;
+    unsigned long  	__unused2;
+    unsigned long  	st_ctime;
+    unsigned long  	__unused3;
+    */
+    unsigned int  	__unused4;
+    unsigned int  	__unused5;
 };
 
 /* This matches struct stat64 in glibc2.1.
  */
 struct kernel_stat64 {
-	unsigned long long st_dev; 	/* Device.  */
-	unsigned long long st_ino;	/* File serial number.  */
-	unsigned int st_mode;		/* File mode.  */
-	unsigned int st_nlink;		/* Link count.  */
-	unsigned int st_uid;		/* User ID of the file's owner.  */
-	unsigned int st_gid;		/* Group ID of the file's group. */
-	unsigned long long st_rdev; 	/* Device number, if device.  */
-	unsigned short int __pad2;
-	long long st_size;		/* Size of file, in bytes.  */
-	long st_blksize;		/* Optimal block size for I/O.  */
-
-	long long st_blocks;		/* Number 512-byte blocks allocated. */
-        struct timespec    st_atim;
-        struct timespec    st_mtim;
-        struct timespec    st_ctim;
-	unsigned long int __unused4;
-	unsigned long int __unused5;
+    unsigned long long  st_dev;      /* Device.  */
+    unsigned long long  st_ino;	     /* File serial number.  */
+    unsigned int        st_mode;     /* File mode.  */
+    unsigned int        st_nlink;    /* Link count.  */
+    unsigned int        st_uid;	     /* User ID of the file's owner.  */
+    unsigned int        st_gid;	     /* Group ID of the file's group. */
+    unsigned long long  st_rdev;     /* Device number, if device.  */
+    unsigned long long  __pad1;
+    long long           st_size;     /* Size of file, in bytes.  */
+    int                 st_blksize;  /* Optimal block size for I/O.  */
+    int                 __pad2;
+    long long           st_blocks;   /* Number 512-byte blocks allocated. */
+    struct timespec     st_atim;
+    struct timespec     st_mtim;
+    struct timespec     st_ctim;
+    unsigned int        __unused4;
+    unsigned int        __unused5;
 };
 #endif
