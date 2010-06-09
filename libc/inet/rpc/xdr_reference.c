@@ -97,7 +97,7 @@ xdr_reference (XDR *xdrs, caddr_t *pp, u_int size, xdrproc_t proc)
 	break;
       }
 
-  stat = (*proc) (xdrs, loc, LASTUNSIGNED);
+  stat = (*proc) (xdrs, loc);
 
   if (xdrs->x_op == XDR_FREE)
     {

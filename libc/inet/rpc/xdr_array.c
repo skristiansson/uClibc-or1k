@@ -125,7 +125,7 @@ xdr_array (XDR *xdrs, caddr_t *addrp, u_int *sizep, u_int maxsize, u_int elsize,
    */
   for (i = 0; (i < c) && stat; i++)
     {
-      stat = (*elproc) (xdrs, target, LASTUNSIGNED);
+      stat = (*elproc) (xdrs, target);
       target += elsize;
     }
 
@@ -165,7 +165,7 @@ xdr_vector (xdrs, basep, nelem, elemsize, xdr_elem)
   elptr = basep;
   for (i = 0; i < nelem; i++)
     {
-      if (!(*xdr_elem) (xdrs, elptr, LASTUNSIGNED))
+      if (!(*xdr_elem) (xdrs, elptr))
 	{
 	  return FALSE;
 	}

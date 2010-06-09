@@ -159,7 +159,7 @@ struct XDR
  * allocate dynamic storage of the appropriate size and return it.
  * bool_t       (*xdrproc_t)(XDR *, caddr_t *);
  */
-typedef bool_t (*xdrproc_t) (XDR *, void *,...);
+typedef bool_t (*xdrproc_t) (XDR *, void *);
 
 
 /*

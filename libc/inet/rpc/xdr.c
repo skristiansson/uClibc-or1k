@@ -633,14 +633,14 @@ xdr_union (XDR *xdrs, enum_t *dscmp, char *unp, const struct xdr_discrim *choice
   for (; choices->proc != NULL_xdrproc_t; choices++)
     {
       if (choices->value == dscm)
-	return (*(choices->proc)) (xdrs, unp, LASTUNSIGNED);
+	return (*(choices->proc)) (xdrs, unp);
     }
 
   /*
    * no match - execute the default xdr routine if there is one
    */
   return ((dfault == NULL_xdrproc_t) ? FALSE :
-	  (*dfault) (xdrs, unp, LASTUNSIGNED));
+	  (*dfault) (xdrs, unp));
 }
 libc_hidden_def(xdr_union)
 
