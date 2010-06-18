@@ -22,11 +22,11 @@
 #include <link.h>
 #include <bits/uClibc_page.h>
 #include <paths.h>
-#include <asm/errno.h>
+#include <bits/errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
-
+#include <stdio.h>
 
 #ifndef SHARED
 void *__libc_stack_end = NULL;
@@ -64,12 +64,6 @@ void internal_function _dl_aux_init (ElfW(auxv_t) *av);
 /*
  * Prototypes.
  */
-extern int *weak_const_function __errno_location(void);
-//libc_hidden_proto(__errno_location)
-extern int *weak_const_function __h_errno_location(void);
-//libc_hidden_proto(__h_errno_location)
-
-extern void weak_function _stdio_init(void) attribute_hidden;
 #ifdef __UCLIBC_HAS_LOCALE__
 extern void weak_function _locale_init(void) attribute_hidden;
 #endif
