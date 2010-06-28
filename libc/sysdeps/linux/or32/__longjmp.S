@@ -77,7 +77,7 @@ ___longjmp:
 	l.lwz   r27,((JB_GPRS+26)*4)(r3)
 	l.lwz   r28,((JB_GPRS+27)*4)(r3)
 	l.lwz   r29,((JB_GPRS+28)*4)(r3)
-	l.lwz   r30,((JB_GPRS+39)*4)(r3)
+	l.lwz   r30,((JB_GPRS+29)*4)(r3)
 	l.lwz   r31,((JB_GPRS+30)*4)(r3)
 	l.jr	r9
 	l.nop
