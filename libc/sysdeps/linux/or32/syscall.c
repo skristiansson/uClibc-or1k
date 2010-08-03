@@ -22,10 +22,11 @@ long syscall(long sysnum, long a, long b, long c, long d, long e, long f)
 	register long __c __asm__ ("r5") = (long)(c);
 	register long __d __asm__ ("r6") = (long)(d);
 	register long __e __asm__ ("r7") = (long)(e);
+	register long __f __asm__ ("r8") = (long)(f);
 	__asm__ __volatile__ (
 			"l.sys     1"
 			: "=r" (__sc_ret)
-			: "r" (__sc_ret), "r" (__a), "r" (__b), "r" (__c), "r" (__d), "r" (__e));
+			: "r" (__sc_ret), "r" (__a), "r" (__b), "r" (__c), "r" (__d), "r" (__e), "r" (__f));
 	__asm__ __volatile__ ("l.nop");
 	if (__sc_ret > (unsigned long) -4095) {
 		errno = -__sc_ret;
