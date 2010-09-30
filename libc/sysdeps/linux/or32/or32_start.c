@@ -21,7 +21,7 @@
 
 /*void __uClibc_main(int argc,void *argv,void *envp);*/
 
-void _uClibc_start(unsigned int first_arg)
+void __uClibc_start(unsigned int first_arg)
 {
 	unsigned int argc;
 	char **argv, **envp;
