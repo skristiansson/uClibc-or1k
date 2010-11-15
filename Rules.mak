@@ -482,7 +482,6 @@ ifeq ($(TARGET_ARCH),v850)
 endif
 
 ifeq ($(TARGET_ARCH),or32)
-      SYMBOL_PREFIX=_
 endif
 
 # Keep the check_gcc from being needlessly executed
