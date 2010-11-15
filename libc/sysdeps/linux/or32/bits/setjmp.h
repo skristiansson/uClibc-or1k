@@ -18,6 +18,9 @@
 
 /* Define the machine-dependent type `jmp_buf'.  or32 version.  */
 
+#ifndef _BITS_SETJMP_H
+#define _BITS_SETJMP_H  1
+
 #ifndef _SETJMP_H
 # error "Never include <bits/setjmp.h> directly; use <setjmp.h> instead."
 #endif
@@ -39,3 +42,5 @@ typedef long int __jmp_buf[32];
    containing a local variable at ADDRESS.  */
 #define _JMPBUF_UNWINDS(jmpbuf, address) \
   ((void *) (address) < (void *) (jmpbuf)[JB_SP])
+
+#endif
