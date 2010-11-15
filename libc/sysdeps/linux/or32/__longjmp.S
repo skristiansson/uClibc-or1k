@@ -21,11 +21,9 @@
    02111-1307 USA.  */
 
 #include <features.h>
-#include "spr_defs.h"
 #define _ASM
 #define _SETJMP_H
 #include <bits/setjmp.h>
-
 
 #ifdef __UCLIBC_HAS_FLOATS__
 #define FP(x...) x
@@ -33,11 +31,11 @@
 #define FP(x...)
 #endif
 
-.globl      ___longjmp;
-.type      ___longjmp, @function;
-.align  2;
+.globl     __longjmp;
+.type      __longjmp,@function;
+.align     2;
 
-___longjmp:    
+__longjmp:    
 #	l.lwz   r11,(JB_SR*4)(r3)
 #	l.mtspr	r0,r11,SPR_SR
 	l.lwz   r1,((JB_GPRS+0)*4)(r3)
@@ -81,5 +79,6 @@ ___longjmp:
 	l.lwz   r31,((JB_GPRS+30)*4)(r3)
 	l.jr	r9
 	l.nop
-.size     ___longjmp,.-___longjmp
+.size     __longjmp,.-__longjmp
+
 libc_hidden_def(__longjmp)
