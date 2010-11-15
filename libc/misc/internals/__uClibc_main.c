@@ -30,7 +30,6 @@
 
 #ifndef SHARED
 void *__libc_stack_end = NULL;
-void*   __dso_handle = (void*) &__dso_handle;
 
 # ifdef __UCLIBC_HAS_SSP__
 #  include <dl-osinfo.h>
