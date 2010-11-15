@@ -32,11 +32,11 @@
 #define FP(x...)
 #endif
 
-.globl     ___sigsetjmp;
-.type      ___sigsetjmp, @function;
+.globl     __sigsetjmp;
+.type      __sigsetjmp, @function;
 .align  2;        
 
-___sigsetjmp:   
+__sigsetjmp:   
 #	l.mfspr	r11,r0,SPR_SR                
 #	l.sw    (JB_SR*4)(r3),r11
 	l.sw    ((JB_GPRS+0)*4)(r3),r1
@@ -70,6 +70,6 @@ ___sigsetjmp:
 	l.sw    ((JB_GPRS+28)*4)(r3),r29
 	l.sw    ((JB_GPRS+29)*4)(r3),r30
 	l.sw    ((JB_GPRS+30)*4)(r3),r31
-	l.j	___sigjmp_save
+	l.j	__sigjmp_save
 	l.nop
-.size     ___sigsetjmp,.-___sigsetjmp
+.size     __sigsetjmp,.-__sigsetjmp
