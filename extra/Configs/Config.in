@@ -28,6 +28,7 @@ choice
 	default TARGET_mips if DESIRED_TARGET_ARCH = "mips"
 	default TARGET_nios if DESIRED_TARGET_ARCH = "nios"
 	default TARGET_nios2 if DESIRED_TARGET_ARCH = "nios2"
+	default TARGET_or32 if DESIRED_TARGET_ARCH = "or32"
 	default TARGET_powerpc if DESIRED_TARGET_ARCH = "powerpc"
 	default TARGET_sh if DESIRED_TARGET_ARCH = "sh"
 	default TARGET_sh64 if DESIRED_TARGET_ARCH = "sh64"
