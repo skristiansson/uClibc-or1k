@@ -117,7 +117,7 @@ _start:
 	 * and thus go in registers r4 and r5, respectively
 	 */
 	l.lwz r4,0(r1)
-	l.addi r5,r4,1
+	l.addi r5,r4,4
 
 	/* Push stack limit onto the stack */
 	/* Provides highest stack address to user code (as stack grows
