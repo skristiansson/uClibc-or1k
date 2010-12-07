@@ -395,15 +395,41 @@ void __uClibc_main(int (*main)(int, char **, char **), int argc,
  * if it gets linked in.
  */
 
-static int __pthread_return_0 (void) { return 0; }
-static void __pthread_return_void (void) { return; }
+/* Threading functions internal to uClibc.  Make these thread functions
+ * weak so that we can elide them from single-threaded processes.  */
+static int __pthread_mutex_init_0 (pthread_mutex_t *__mutex,
+                __const pthread_mutexattr_t *__mutex_attr) { return 0; }
+static int __pthread_mutex_lock_0 (pthread_mutex_t *__mutex) { return 0; }
+static int __pthread_mutex_unlock_0 (pthread_mutex_t *__mutex) { return 0; }
+static int __pthread_mutex_trylock_0 (pthread_mutex_t *__mutex) { return 0; }
 
-weak_alias (__pthread_return_0, __pthread_mutex_init)
-weak_alias (__pthread_return_0, __pthread_mutex_lock)
-weak_alias (__pthread_return_0, __pthread_mutex_trylock)
-weak_alias (__pthread_return_0, __pthread_mutex_unlock)
-weak_alias (__pthread_return_void, _pthread_cleanup_push_defer)
-weak_alias (__pthread_return_void, _pthread_cleanup_pop_restore)
+# ifndef __UCLIBC_HAS_THREADS_NATIVE__
+static void _pthread_cleanup_push_defer_0 (
+                struct _pthread_cleanup_buffer *__buffer,
+                void (*__routine) (void *), void *__arg) { return; }
+static void _pthread_cleanup_pop_restore_0 (
+                struct _pthread_cleanup_buffer *__buffer,
+                int __execute) { return; }
+# endif
+
+#if 0
+static int __pthread_return_0 (void) { return 0; } 
+static void __pthread_return_void (void) { return; } 
+extern __typeof (__pthread_return_0) __pthread_mutex_trylock __attribute__ ((weak, alias ("__pthread_return_0")));
+#endif
+
+#if 0
+static int __pthread_return_0 (pthread_mutex_t *__mutex) { return 0; }
+/*static int __pthread_return_0 (void) { return 0; }*/
+static void __pthread_return_void (void) { return; }
+#endif
+
+weak_alias (__pthread_mutex_init_0, __pthread_mutex_init)
+weak_alias (__pthread_mutex_lock_0, __pthread_mutex_lock)
+weak_alias (__pthread_mutex_trylock_0, __pthread_mutex_trylock)
+weak_alias (__pthread_mutex_unlock_0, __pthread_mutex_unlock)
+weak_alias (_pthread_cleanup_push_defer_0, _pthread_cleanup_push_defer)
+weak_alias (_pthread_cleanup_pop_restore_0, _pthread_cleanup_pop_restore)
 # ifdef __UCLIBC_HAS_THREADS_NATIVE__
 weak_alias (__pthread_return_0, __pthread_mutexattr_init)
 weak_alias (__pthread_return_0, __pthread_mutexattr_destroy)
