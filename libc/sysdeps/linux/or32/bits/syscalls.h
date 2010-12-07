@@ -36,7 +36,7 @@
        LOAD_ARGS_##nr (args)						\
        __asm__ __volatile__ ("l.sys     1"				\
                              : "=r" (__sc_ret)				\
-                             : "r" (__sc_ret) ASM_ARGS_##nr);		\
+                             : "0" (__sc_ret) ASM_ARGS_##nr);		\
        __asm__ __volatile__ ("l.nop");					\
        __sys_result = __sc_ret;						\
      }									\
