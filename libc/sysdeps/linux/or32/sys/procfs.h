@@ -50,8 +50,8 @@ typedef struct {
 #endif
 
 /* Altivec registers */
-typedef __uint128_t elf_vrreg_t;
-typedef elf_vrreg_t elf_vrregset_t[ELF_NVRREG];
+//typedef __uint128_t elf_vrreg_t;
+//typedef elf_vrreg_t elf_vrregset_t[ELF_NVRREG];
 
 struct elf_siginfo
   {
