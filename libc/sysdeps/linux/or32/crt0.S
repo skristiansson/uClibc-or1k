@@ -1,5 +1,12 @@
 /* Copyright (C) 1995, 1996, 1997, 1998, 2001, 2002, 2005
    Free Software Foundation, Inc.
+
+   Copyright (C) 2010 Embecosm Limited
+
+   Contributor  Jeremy Bennett <jeremy.bennett@embecosm.com>
+   Contributor  Joern Rennecke <joern.rennecke@embecosm.com>
+   With other contributions from the OpenCores community.
+
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -83,8 +90,16 @@ _start:
 
 	l.movhi r3,hi(main)
 	l.ori   r3,r3,lo(main)
+
+	/* Put the constructor and destructor initialization as args four and
+	   five into r6 and r7 */
+	l.movhi	r6,hi(__init)
+	l.ori	r6,r6,lo(__init)
+	l.movhi	r7,hi(__fini)
+	l.ori	r7,r7,lo(__fini)
 	
-	/* Adjust stack to account for arg 7 */
+	/* Adjust stack to account for a total of 7 args (i.e. the last one is
+	   on the stack. */
 	l.addi  r1,r1,-4
 
 	/* Let the libc call main and exit with its return code.  */
