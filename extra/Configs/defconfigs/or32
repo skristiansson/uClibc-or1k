@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Version: 0.9.32-git
-# Sun Jan 30 20:50:06 2011
+# Sun Jan 30 21:11:01 2011
 #
 # TARGET_alpha is not set
 # TARGET_arm is not set
@@ -52,7 +52,7 @@ UCLIBC_HAS_FPU=y
 # DO_C99_MATH is not set
 # DO_XSI_MATH is not set
 # UCLIBC_HAS_FENV is not set
-KERNEL_HEADERS="${PREFIX}/sys-root/include"
+KERNEL_HEADERS="${SYSROOT}/usr/include"
 HAVE_DOT_CONFIG=y
 
 #
@@ -189,8 +189,8 @@ UCLIBC_HAS_GLOB=y
 #
 # Library Installation Options
 #
-RUNTIME_PREFIX="/sys-root"
-DEVEL_PREFIX="/sys-root"
+RUNTIME_PREFIX="/"
+DEVEL_PREFIX="/usr"
 MULTILIB_DIR="lib"
 HARDWIRED_ABSPATH=y
 
