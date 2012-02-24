@@ -1,7 +1,5 @@
-/* BSD `_setjmp' entry point to `sigsetjmp (..., 0)'.  or32 version.
-
-   Based on PowerPC version:
-   Copyright (C) 1994, 1997, 1999, 2000 Free Software Foundation, Inc.
+/* or1k-specific implementation of profiling support.
+   Copyright (C) 1997 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -19,18 +17,15 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
    02111-1307 USA.  */
 
-/* This just does a tail-call to `__sigsetjmp (ARG, 0)'.
-   We cannot do it in C because it must be a tail-call, so frame-unwinding
-   in setjmp doesn't clobber the state restored by longjmp.  */
+/* We need a special version of the `mcount' function because it has
+   to preserve more registers than your usual function.  */
 
-#include "spr_defs.h"
+void __mcount_internal (unsigned long frompc, unsigned long selfpc);
 
-.globl      _setjmp;
-.type      _setjmp, @function;
-.align  2;
+#define _MCOUNT_DECL(frompc, selfpc) \
+void __mcount_internal (unsigned long frompc, unsigned long selfpc)
 
-_setjmp:
-	l.addi	 r4,r0,0			/* Set second argument to 0.  */
-	l.j	 __sigsetjmp
-	l.nop
-.size     _setjmp,.-_setjmp
+
+/* Define MCOUNT as empty since we have the implementation in another
+   file.  */
+#define MCOUNT

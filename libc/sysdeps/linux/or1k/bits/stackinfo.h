@@ -1,5 +1,4 @@
-/* or32-specific implementation of profiling support.
-   Copyright (C) 1997 Free Software Foundation, Inc.
+/* Copyright (C) 1999 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -17,15 +16,13 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
    02111-1307 USA.  */
 
-/* We need a special version of the `mcount' function because it has
-   to preserve more registers than your usual function.  */
+/* This file contains a bit of information about the stack allocation
+   of the processor.  */
 
-void __mcount_internal (unsigned long frompc, unsigned long selfpc);
+#ifndef _STACKINFO_H
+#define _STACKINFO_H	1
 
-#define _MCOUNT_DECL(frompc, selfpc) \
-void __mcount_internal (unsigned long frompc, unsigned long selfpc)
+/* On or1k the stack grows down.  */
+#define _STACK_GROWS_DOWN	1
 
-
-/* Define MCOUNT as empty since we have the implementation in another
-   file.  */
-#define MCOUNT
+#endif	/* stackinfo.h */

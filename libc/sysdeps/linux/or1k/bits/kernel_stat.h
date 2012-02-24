@@ -1,4 +1,4 @@
-/* taken from linux/include/asm-or32/stat.h */
+/* taken from linux/include/asm-or1k/stat.h */
 
 #ifndef _BITS_STAT_STRUCT_H
 #define _BITS_STAT_STRUCT_H

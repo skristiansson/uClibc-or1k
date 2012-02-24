@@ -1,4 +1,4 @@
-/* setjmp for or32
+/* setjmp for or1k
 
    Based on:
    setjmp for PowerPC.

@@ -1,4 +1,7 @@
-/* Copyright (C) 1999 Free Software Foundation, Inc.
+/* BSD `_setjmp' entry point to `sigsetjmp (..., 0)'.  or1k version.
+
+   Based on PowerPC version:
+   Copyright (C) 1994, 1997, 1999, 2000 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -16,13 +19,18 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
    02111-1307 USA.  */
 
-/* This file contains a bit of information about the stack allocation
-   of the processor.  */
+/* This just does a tail-call to `__sigsetjmp (ARG, 0)'.
+   We cannot do it in C because it must be a tail-call, so frame-unwinding
+   in setjmp doesn't clobber the state restored by longjmp.  */
 
-#ifndef _STACKINFO_H
-#define _STACKINFO_H	1
+#include "spr_defs.h"
 
-/* On or32 the stack grows down.  */
-#define _STACK_GROWS_DOWN	1
+.globl      _setjmp;
+.type      _setjmp, @function;
+.align  2;
 
-#endif	/* stackinfo.h */
+_setjmp:
+	l.addi	 r4,r0,0			/* Set second argument to 0.  */
+	l.j	 __sigsetjmp
+	l.nop
+.size     _setjmp,.-_setjmp

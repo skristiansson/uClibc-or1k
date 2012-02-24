@@ -258,7 +258,7 @@ typedef struct
 #define EM_MN10300	89		/* Matsushita MN10300 */
 #define EM_MN10200	90		/* Matsushita MN10200 */
 #define EM_PJ		91		/* picoJava */
-#define EM_OPENRISC	92		/* OpenRISC 32-bit embedded processor */
+#define EM_OR1K		92		/* OpenRISC 32-bit embedded processor */
 #define EM_ARC_A5	93		/* ARC Cores Tangent-A5 */
 #define EM_XTENSA	94		/* Tensilica Xtensa Architecture */
 #define EM_IP2K		101		/* Ubicom IP2022 micro controller */
@@ -294,9 +294,6 @@ typedef struct
 /* Old version of PowerPC, this should be removed shortly. */
 #define EM_PPC_OLD	17
 
-/* (Deprecated) Temporary number for the OpenRISC processor.  */
-#define EM_OR32		0x8472
-
 /* Renesas M32C and M16C.  */
 #define EM_M32C			0xFEB0
 
@@ -326,10 +323,6 @@ typedef struct
 /* AVR magic number
    Written in the absense of an ABI.  */
 #define EM_AVR_OLD		0x1057
-
-/* OpenRISC magic number
-   Written in the absense of an ABI.  */
-#define EM_OPENRISC_OLD		0x3426
 
 /* DLX magic number
    Written in the absense of an ABI.  */
