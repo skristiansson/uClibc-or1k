@@ -21,21 +21,6 @@
 
 #include <features.h>
 #include <signal.h>
-
-/* We need the signal context definitions even if they are not used
-   included in <signal.h>.  */
-#include <bits/sigcontext.h>
-
-typedef struct sigcontext mcontext_t;
-
-/* Userlevel context.  */
-typedef struct ucontext
-  {
-    unsigned long int uc_flags;
-    struct ucontext *uc_link;
-    stack_t uc_stack;
-    mcontext_t uc_mcontext;
-    __sigset_t uc_sigmask;
-  } ucontext_t;
+#include <asm/ucontext.h>
 
 #endif /* sys/ucontext.h */
