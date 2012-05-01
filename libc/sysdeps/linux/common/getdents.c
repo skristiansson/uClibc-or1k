@@ -26,8 +26,7 @@
 /* With newer versions of linux, the getdents syscall returns d_type
  * information after the name field.
  *
- * See __ASSUME_GETDENTS32_D_TYPE in glibc's kernel-features.h for specific
- * version / arch details.
+ * See __ASSUME_GETDENTS32_D_TYPE below for specific version / arch details.
  */
 
 #ifndef offsetof
@@ -44,8 +43,18 @@ struct kernel_dirent
 
 ssize_t __getdents (int fd, char *buf, size_t nbytes) attribute_hidden;
 
+#ifdef __NR_getdents
 #define __NR___syscall_getdents __NR_getdents
 static __always_inline _syscall3(int, __syscall_getdents, int, fd, unsigned char *, kdirp, size_t, count)
+
+/* Starting with version 2.6.4-rc1 the getdents syscall returns d_type
+   information as well and in between 2.6.5 and 2.6.8 most compat wrappers
+   were fixed too.  Except s390{,x} which was fixed in 2.6.11.  */
+#if (__LINUX_KERNEL_VERSION >= 0x020608 && !defined __s390__) \
+    || (__LINUX_KERNEL_VERSION >= 0x02060b && defined __s390__)
+# define __ASSUME_GETDENTS32_D_TYPE	1
+#endif
+#endif
 
 #if defined __ASSUME_GETDENTS32_D_TYPE
 
