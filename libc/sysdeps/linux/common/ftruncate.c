@@ -11,5 +11,12 @@
 #include <unistd.h>
 
 
+#ifdef __NR_ftruncate
 _syscall2(int, ftruncate, int, fd, __off_t, length)
+#elif defined __NR_truncate64
+int ftruncate(int fd, __off_t length)
+{
+	return ftruncate64(fd, length);
+}
+#endif
 libc_hidden_def(ftruncate)

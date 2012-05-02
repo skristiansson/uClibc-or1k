@@ -11,5 +11,12 @@
 #include <unistd.h>
 
 
+#ifdef __NR_truncate
 _syscall2(int, truncate, const char *, path, __off_t, length)
+#elif defined(__NR_truncate64)
+int truncate(const char *path, __off_t length)
+{
+	return truncate64(path, length);
+}
+#endif
 libc_hidden_def(truncate)
