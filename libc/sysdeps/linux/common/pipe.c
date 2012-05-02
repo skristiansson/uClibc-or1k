@@ -11,5 +11,12 @@
 #include <unistd.h>
 
 
+#if defined(__NR_pipe)
 _syscall1(int, pipe, int *, filedes)
+#elif defined(__NR_pipe2)
+int pipe(int filedes[2])
+{
+	return INLINE_SYSCALL(pipe2, 2, filedes, 0);
+}
+#endif
 libc_hidden_def(pipe)
