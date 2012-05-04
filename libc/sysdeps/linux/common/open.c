@@ -14,9 +14,17 @@
 #include <string.h>
 #include <sys/param.h>
 
+#ifdef __NR_open
 #define __NR___syscall_open __NR_open
 static __inline__ _syscall3(int, __syscall_open, const char *, file,
 		int, flags, __kernel_mode_t, mode)
+#endif
+#ifdef __NR_openat
+#define __NR___syscall_openat __NR_openat
+static __inline__ _syscall4(int, __syscall_openat, int, fd, const char *, file,
+		int, flags, __kernel_mode_t, mode)
+#define __syscall_open(a,b,c) __syscall_openat(AT_FDCWD, (a), (b), (c))
+#endif
 
 int open(const char *file, int oflag, ...)
 {

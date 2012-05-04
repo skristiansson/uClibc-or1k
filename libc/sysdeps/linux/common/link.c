@@ -9,4 +9,12 @@
 
 #include <sys/syscall.h>
 #include <unistd.h>
+#include <fcntl.h>
+#if defined(__NR_link)
 _syscall2(int, link, const char *, oldpath, const char *, newpath)
+#elif defined(__NR_linkat)
+int link(const char * oldpath, const char * newpath)
+{
+	return INLINE_SYSCALL(linkat, 5, AT_FDCWD, oldpath, AT_FDCWD, newpath, 0);
+}
+#endif

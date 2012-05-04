@@ -403,7 +403,7 @@ make_stub(swapoff)
 make_stub(swapon)
 #endif
 
-#ifndef __NR_symlink
+#if !defined __NR_symlink && !defined __NR_symlinkat
 make_stub(symlink)
 #endif
 
@@ -443,7 +443,7 @@ make_stub(lutimes)
 # endif
 #endif
 
-#if !defined __NR_utime && !defined __NR_utimes
+#if !defined __NR_utime && !defined __NR_utimes && !defined __NR_utimensat
 /*make_stub(utime) obsoleted */
 make_stub(utimes)
 #endif

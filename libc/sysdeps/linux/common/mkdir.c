@@ -9,14 +9,15 @@
 
 #include <sys/syscall.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 
-
-#define __NR___syscall_mkdir __NR_mkdir
-static __inline__ _syscall2(int, __syscall_mkdir, const char *, pathname,
-		__kernel_mode_t, mode)
 
 int mkdir(const char *pathname, mode_t mode)
 {
-	return (__syscall_mkdir(pathname, mode));
+#ifdef __NR_mkdir
+	return INLINE_SYSCALL(mkdir, 2, pathname, (__kernel_mode_t)mode);
+#else
+	return INLINE_SYSCALL(mkdirat, 3, AT_FDCWD, pathname, (__kernel_mode_t)mode);
+#endif
 }
 libc_hidden_def(mkdir)

@@ -9,22 +9,23 @@
 
 #include <sys/syscall.h>
 
-#if defined __UCLIBC_HAS_LFS__ && defined __NR_lstat64
+#if defined __UCLIBC_HAS_LFS__ && (defined __NR_lstat64 || defined __NR_fstatat64)
 # include <unistd.h>
 # include <sys/stat.h>
+# include <fcntl.h>
 # include "xstatconv.h"
 
-
-# define __NR___syscall_lstat64 __NR_lstat64
-static __inline__ _syscall2(int, __syscall_lstat64, const char *, file_name,
-		  struct kernel_stat64 *, buf)
 
 int lstat64(const char *file_name, struct stat64 *buf)
 {
 	int result;
 	struct kernel_stat64 kbuf;
 
-	result = __syscall_lstat64(file_name, &kbuf);
+# if defined __NR_lstat64
+	result = INLINE_SYSCALL(lstat64, 2, file_name, &kbuf);
+# elif defined __NR_fstatat64
+	result = INLINE_SYSCALL(fstatat64, 4, AT_FDCWD, file_name, &kbuf, AT_SYMLINK_NOFOLLOW);
+# endif
 	if (result == 0) {
 		__xstat64_conv(&kbuf, buf);
 	}

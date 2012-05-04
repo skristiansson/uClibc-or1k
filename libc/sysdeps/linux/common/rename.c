@@ -12,13 +12,14 @@
 #include <string.h>
 #include <sys/param.h>
 #include <stdio.h>
-
-#define __NR___syscall_rename __NR_rename
-static __inline__ _syscall2(int, __syscall_rename, const char *, oldpath,
-		const char *, newpath)
+#include <fcntl.h>
 
 int rename(const char * oldpath, const char * newpath)
 {
-	return __syscall_rename(oldpath, newpath);
+# ifdef __NR_rename
+	return INLINE_SYSCALL(rename, 2, oldpath, newpath);
+# else
+	return INLINE_SYSCALL(renameat, 4, AT_FDCWD, oldpath, AT_FDCWD, newpath);
+# endif
 }
 

@@ -10,10 +10,32 @@
 #include <sys/syscall.h>
 #include <utime.h>
 #include <sys/time.h>
-
+#include <stdlib.h>
+#include <fcntl.h>
 
 #ifdef __NR_utimes
 _syscall2(int, utimes, const char *, file, const struct timeval *, tvp)
+#elif defined __NR_utimensat
+
+int utimes(const char *file, const struct timeval tvp[2])
+{
+	struct timespec ts[2];
+
+	if (tvp) {
+		if (tvp[0].tv_usec >= 1000000 || tvp[0].tv_usec < 0 ||
+		    tvp[1].tv_usec >= 1000000 || tvp[1].tv_usec < 0)
+			return -EINVAL;
+
+		ts[0].tv_sec = tvp[0].tv_sec;
+		ts[0].tv_nsec = 1000 * tvp[0].tv_usec;
+		ts[1].tv_sec = tvp[1].tv_sec;
+		ts[1].tv_nsec = 1000 * tvp[1].tv_usec;
+
+		return INLINE_SYSCALL(utimensat, 4, AT_FDCWD, file, ts, 0);
+	} else {
+		return INLINE_SYSCALL(utimensat, 4, AT_FDCWD, file, NULL, 0);
+	}
+}
 #else
 #include <stdlib.h>
 

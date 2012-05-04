@@ -19,12 +19,20 @@
    02111-1307 USA.  */
 
 #include <sysdep.h>
+#include <fcntl.h>
 
 /* Uncancelable open.  */
+#ifdef __NR_open
 #define open_not_cancel(name, flags, mode) \
    INLINE_SYSCALL (open, 3, (const char *) (name), (flags), (mode))
 #define open_not_cancel_2(name, flags) \
    INLINE_SYSCALL (open, 2, (const char *) (name), (flags))
+#elif defined (__NR_openat)
+#define open_not_cancel(name, flags, mode) \
+   INLINE_SYSCALL (openat, 4, AT_FDCWD, (const char *) (name), (flags), (mode))
+#define open_not_cancel_2(name, flags) \
+   INLINE_SYSCALL (openat, 3, AT_FDCWD, (const char *) (name), (flags))
+#endif
 
 /* Uncancelable close.  */
 #define close_not_cancel(fd) \

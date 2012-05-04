@@ -49,9 +49,17 @@ static __always_inline _syscall1(void, _dl_exit, int, status)
 #define __NR__dl_close __NR_close
 static __always_inline _syscall1(int, _dl_close, int, fd)
 
+#if defined(__NR_open)
 #define __NR__dl_open __NR_open
 static __always_inline _syscall3(int, _dl_open, const char *, fn, int, flags,
                         __kernel_mode_t, mode)
+#elif defined(__NR_openat)
+static __always_inline ssize_t
+_dl_open(const char *fn, int flags, __kernel_mode_t mode)
+{
+	return INLINE_SYSCALL(openat, 4, AT_FDCWD, fn, flags, mode);
+}
+#endif
 
 #define __NR__dl_write __NR_write
 static __always_inline _syscall3(unsigned long, _dl_write, int, fd,
@@ -117,9 +125,17 @@ static __always_inline _syscall0(gid_t, _dl_getegid)
 #define __NR__dl_getpid __NR_getpid
 static __always_inline _syscall0(gid_t, _dl_getpid)
 
+#if defined(__NR_readlink)
 #define __NR__dl_readlink __NR_readlink
 static __always_inline _syscall3(int, _dl_readlink, const char *, path, char *, buf,
                         size_t, bufsiz)
+#elif defined(__NR_readlinkat)
+static __always_inline int
+_dl_readlink(const char *fn, char *buf, size_t size)
+{
+	return INLINE_SYSCALL(readlinkat, 4, AT_FDCWD, fn, buf, size);
+}
+#endif
 
 #ifdef __NR_pread64
 #define __NR___syscall_pread __NR_pread64

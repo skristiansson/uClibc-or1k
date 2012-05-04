@@ -11,7 +11,7 @@
 #include "xstatconv.h"
 
 /* 64bit ports tend to favor newfstatat() */
-#ifdef __NR_newfstatat
+#if defined(__NR_newfstatat) && !defined(__NR_fstatat64)
 # define __NR_fstatat64 __NR_newfstatat
 #endif
 

@@ -20,12 +20,20 @@
 
 #include <sys/types.h>
 #include <sysdep.h>
+#include <fcntl.h>
 
 /* Uncancelable open.  */
+#ifdef __NR_open
 #define open_not_cancel(name, flags, mode) \
    INLINE_SYSCALL (open, 3, (const char *) (name), (flags), (mode))
 #define open_not_cancel_2(name, flags) \
    INLINE_SYSCALL (open, 2, (const char *) (name), (flags))
+#elif defined __NR_openat
+#define open_not_cancel(name, flags, mode) \
+   INLINE_SYSCALL (openat, 4, AT_FDCWD, (const char *) (name), (flags), (mode))
+#define open_not_cancel_2(name, flags) \
+   INLINE_SYSCALL (openat, 3, AT_FDCWD, (const char *) (name), (flags))
+#endif
 
 /* Uncancelable openat.  */
 #if !defined NOT_IN_libc || defined IS_IN_libpthread || defined IS_IN_librt

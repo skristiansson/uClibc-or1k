@@ -11,5 +11,13 @@
 #include <unistd.h>
 
 
+#if defined __NR_unlink
 _syscall1(int, unlink, const char *, pathname)
+#elif defined __NR_unlinkat
+#include <fcntl.h>
+int unlink(const char *pathname)
+{
+	return INLINE_SYSCALL(unlinkat, 3, AT_FDCWD, pathname, 0);
+}
+#endif
 libc_hidden_def(unlink)
