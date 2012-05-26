@@ -45,11 +45,11 @@ extern __typeof(sigaction) __libc_sigaction;
 extern int _errno;
 extern int _h_errno;
 
-# if defined __UCLIBC_HAS_IPv4__ || defined __UCLIBC_HAS_IPV6__
+# if defined __UCLIBC_HAS_RESOLVER_SUPPORT__
 /* We need the global/static resolver state here.  */
 # include <resolv.h>
 # undef _res
-extern struct __res_state _res;
+extern struct __res_state *__resp;
 # endif
 #endif
 
@@ -73,9 +73,6 @@ struct _pthread_descr_struct __pthread_initial_thread = {
 #if !(USE_TLS && HAVE___THREAD)
   .p_errnop = &_errno,
   .p_h_errnop = &_h_errno,
-# if defined __UCLIBC_HAS_IPv4__ || defined __UCLIBC_HAS_IPV6__
-  .p_resp = &_res,
-# endif
 #endif
   .p_userstack = 1,
   .p_resume_count = __ATOMIC_INITIALIZER,
@@ -542,16 +539,16 @@ static void pthread_initialize(void)
 #ifdef USE_TLS
   /* Update the descriptor for the initial thread. */
   THREAD_SETMEM (((pthread_descr) NULL), p_pid, __getpid());
-# if !defined HAVE___THREAD && (defined __UCLIBC_HAS_IPv4__ || defined __UCLIBC_HAS_IPV6__)
+# if !defined HAVE___THREAD && defined __UCLIBC_HAS_RESOLVER_SUPPORT__
   /* Likewise for the resolver state _res.  */
-  THREAD_SETMEM (((pthread_descr) NULL), p_resp, &_res);
+  THREAD_SETMEM (((pthread_descr) NULL), p_resp, __resp);
 # endif
 #else
   /* Update the descriptor for the initial thread. */
   __pthread_initial_thread.p_pid = __getpid();
-# if defined __UCLIBC_HAS_IPv4__ || defined __UCLIBC_HAS_IPV6__
+# if defined __UCLIBC_HAS_RESOLVER_SUPPORT__
   /* Likewise for the resolver state _res.  */
-  __pthread_initial_thread.p_resp = &_res;
+  __pthread_initial_thread.p_resp = __resp;
 # endif
 #endif
 #if !__ASSUME_REALTIME_SIGNALS
@@ -613,6 +610,17 @@ static void pthread_initialize(void)
 #ifdef USE_TLS
   GL(dl_init_static_tls) = &__pthread_init_static_tls;
 #endif
+
+  /* uClibc-specific stdio initialization for threads. */
+  {
+    FILE *fp;
+    _stdio_user_locking = 0;       /* 2 if threading not initialized */
+    for (fp = _stdio_openlist; fp != NULL; fp = fp->__nextopen) {
+      if (fp->__user_locking != 1) {
+        fp->__user_locking = 0;
+      }
+    }
+  }
 }
 
 void __pthread_initialize(void)
@@ -742,7 +750,7 @@ int __pthread_initialize_manager(void)
 			 THREAD_MANAGER_STACK_SIZE,
 			 CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_SYSVSEM,
 			 mgr);
-#elif _STACK_GROWS_UP
+#elif defined _STACK_GROWS_UP
 	  pid = __clone(__pthread_manager_event,
 			(void **) __pthread_manager_thread_bos,
 			CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_SYSVSEM,
@@ -781,7 +789,7 @@ int __pthread_initialize_manager(void)
       pid = __clone2(__pthread_manager, (void **) __pthread_manager_thread_bos,
 		     THREAD_MANAGER_STACK_SIZE,
 		     CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_SYSVSEM, mgr);
-#elif _STACK_GROWS_UP
+#elif defined _STACK_GROWS_UP
       pid = __clone(__pthread_manager, (void **) __pthread_manager_thread_bos,
 		    CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_SYSVSEM, mgr);
 #else
@@ -1117,8 +1125,8 @@ void __pthread_reset_main_thread(void)
   /* Now this thread modifies the global variables.  */
   THREAD_SETMEM(self, p_errnop, &_errno);
   THREAD_SETMEM(self, p_h_errnop, &_h_errno);
-# if defined __UCLIBC_HAS_IPv4__ || defined __UCLIBC_HAS_IPV6__
-  THREAD_SETMEM(self, p_resp, &_res);
+# if defined __UCLIBC_HAS_RESOLVER_SUPPORT__
+  THREAD_SETMEM(self, p_resp, __resp);
 # endif
 #endif
 

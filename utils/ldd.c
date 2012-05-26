@@ -101,6 +101,11 @@
 #define ELFCLASSM	ELFCLASS64
 #endif
 
+#if defined(__microblaze__)
+#define MATCH_MACHINE(x) (x == EM_MICROBLAZE_OLD)
+#define ELFCLASSM	ELFCLASS32
+#endif
+
 #ifndef MATCH_MACHINE
 # ifdef __linux__
 #  include <asm/elf.h>
@@ -121,6 +126,8 @@
 #elif UCLIBC_ENDIAN_HOST == UCLIBC_ENDIAN_BIG
 #define ELFDATAM	ELFDATA2MSB
 #endif
+
+#define TRUSTED_LDSO	UCLIBC_RUNTIME_PREFIX "lib/" UCLIBC_LDSO
 
 struct library {
 	char *name;
@@ -538,6 +545,7 @@ static void find_needed_libraries(ElfW(Ehdr) *ehdr, ElfW(Dyn) *dynamic, int is_s
 	}
 }
 
+#ifdef __LDSO_LDD_SUPPORT__
 static struct library *find_elf_interpreter(ElfW(Ehdr) *ehdr)
 {
 	ElfW(Phdr) *phdr;
@@ -553,7 +561,7 @@ static struct library *find_elf_interpreter(ElfW(Ehdr) *ehdr)
 		interp_name = strdup(s);
 		interp_dir = strdup(s);
 		tmp = strrchr(interp_dir, '/');
-		if (*tmp)
+		if (tmp)
 			*tmp = '\0';
 		else {
 			free(interp_dir);
@@ -576,7 +584,7 @@ static struct library *find_elf_interpreter(ElfW(Ehdr) *ehdr)
 				}
 				newlib->name = NULL;
 				newlib->path = NULL;
-				return NULL;
+				break;
 			}
 		}
 		if (newlib == NULL)
@@ -603,6 +611,7 @@ static struct library *find_elf_interpreter(ElfW(Ehdr) *ehdr)
 	}
 	return NULL;
 }
+#endif /* __LDSO_LDD_SUPPORT__ */
 
 /* map the .so, and locate interesting pieces */
 /*
@@ -612,11 +621,13 @@ static int find_dependencies(char *filename)
 {
 	int is_suid = 0;
 	FILE *thefile;
-	struct library *interp;
 	struct stat statbuf;
 	ElfW(Ehdr) *ehdr = NULL;
 	ElfW(Shdr) *dynsec = NULL;
 	ElfW(Dyn) *dynamic = NULL;
+#ifdef __LDSO_LDD_SUPPORT__
+	struct library *interp;
+#endif
 
 	if (filename == not_found)
 		return 0;
@@ -673,9 +684,9 @@ foo:
 	}
 
 	interpreter_already_found = 0;
+#ifdef __LDSO_LDD_SUPPORT__
 	interp = find_elf_interpreter(ehdr);
 
-#ifdef __LDSO_LDD_SUPPORT__
 	if (interp
 	    && (ehdr->e_type == ET_EXEC || ehdr->e_type == ET_DYN)
 	    && ehdr->e_ident[EI_CLASS] == ELFCLASSM
@@ -693,16 +704,59 @@ foo:
 				"LD_TRACE_LOADED_OBJECTS=1",
 				NULL
 			};
+# ifdef __LDSO_STANDALONE_SUPPORT__
+			char * lib_path = getenv("LD_LIBRARY_PATH");
 
+			/* The 'extended' environment inclusing the LD_LIBRARY_PATH */
+			static char *ext_environment[ARRAY_SIZE(environment) + 1];
+			char **envp = (char **) environment;
+
+			if (lib_path) {
+				/*
+				 * If the LD_LIBRARY_PATH is set, it needs to include it
+				 * into the environment for the new process to be spawned
+				 */
+				char ** eenvp = (char **) ext_environment;
+
+				/* Copy the N-1 environment's entries */
+				while (*envp)
+					*eenvp++=*envp++;
+
+				/* Make room for LD_LIBRARY_PATH */
+				*eenvp = (char *) malloc(sizeof("LD_LIBRARY_PATH=")
+									  + strlen(lib_path));
+				strcpy(*eenvp, "LD_LIBRARY_PATH=");
+				strcat(*eenvp, lib_path);
+				lib_path = *eenvp;
+				/* ext_environment[size] is already NULL */
+
+				/* Use the extended environment */
+				envp = ext_environment;
+			}
+			if ((pid = vfork()) == 0) {
+				/*
+				 * Force to use the standard dynamic linker in stand-alone mode.
+				 * It will fails at runtime if support is not actually available
+				 */
+				execle(TRUSTED_LDSO, TRUSTED_LDSO, filename, NULL, envp);
+				_exit(0xdead);
+			}
+# else
 			if ((pid = vfork()) == 0) {
 				/* Cool, it looks like we should be able to actually
 				 * run this puppy.  Do so now... */
 				execle(filename, filename, NULL, environment);
 				_exit(0xdead);
 			}
-
+# endif
 			/* Wait till it returns */
 			waitpid(pid, &status, 0);
+
+# ifdef __LDSO_STANDALONE_SUPPORT__
+			/* Do not leak */
+			free(lib_path);
+# endif
+
 			if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
 				return 1;
 			}

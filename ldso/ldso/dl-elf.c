@@ -132,7 +132,7 @@ _dl_protect_relro (struct elf_resolve *l)
 /* This function's behavior must exactly match that
  * in uClibc/ldso/util/ldd.c */
 static struct elf_resolve *
-search_for_named_library(const char *name, int secure, const char *path_list,
+search_for_named_library(const char *name, unsigned rflags, const char *path_list,
 	struct dyn_elf **rpnt)
 {
 	char *path, *path_n, *mylibname;
@@ -174,7 +174,7 @@ search_for_named_library(const char *name, int secure, const char *path_list,
 				_dl_strcpy(mylibname, "."); /* Assume current dir if empty path */
 			_dl_strcat(mylibname, "/");
 			_dl_strcat(mylibname, name);
-			if ((tpnt = _dl_load_elf_shared_library(secure, rpnt, mylibname)) != NULL)
+			if ((tpnt = _dl_load_elf_shared_library(rflags, rpnt, mylibname)) != NULL)
 				return tpnt;
 			path_n = path+1;
 		}
@@ -187,8 +187,8 @@ search_for_named_library(const char *name, int secure, const char *path_list,
 unsigned long _dl_error_number;
 unsigned long _dl_internal_error_number;
 
-struct elf_resolve *_dl_load_shared_library(int secure, struct dyn_elf **rpnt,
-	struct elf_resolve *tpnt, char *full_libname, int __attribute__((unused)) trace_loaded_objects)
+struct elf_resolve *_dl_load_shared_library(unsigned rflags, struct dyn_elf **rpnt,
+	struct elf_resolve *tpnt, char *full_libname, int attribute_unused trace_loaded_objects)
 {
 	char *pnt;
 	struct elf_resolve *tpnt1;
@@ -216,7 +216,7 @@ struct elf_resolve *_dl_load_shared_library(int secure, struct dyn_elf **rpnt,
 
 	if (libname != full_libname) {
 		_dl_if_debug_dprint("\ttrying file='%s'\n", full_libname);
-		tpnt1 = _dl_load_elf_shared_library(secure, rpnt, full_libname);
+		tpnt1 = _dl_load_elf_shared_library(rflags, rpnt, full_libname);
 		if (tpnt1) {
 			return tpnt1;
 		}
@@ -231,20 +231,21 @@ struct elf_resolve *_dl_load_shared_library(int secure, struct dyn_elf **rpnt,
 	if (pnt) {
 		pnt += (unsigned long) tpnt->dynamic_info[DT_STRTAB];
 		_dl_if_debug_dprint("\tsearching RPATH='%s'\n", pnt);
-		if ((tpnt1 = search_for_named_library(libname, secure, pnt, rpnt)) != NULL)
+		if ((tpnt1 = search_for_named_library(libname, rflags, pnt, rpnt)) != NULL)
 			return tpnt1;
 	}
 #endif
 
+#ifdef __LDSO_LD_LIBRARY_PATH__
 	/* Check in LD_{ELF_}LIBRARY_PATH, if specified and allowed */
 	if (_dl_library_path) {
 		_dl_if_debug_dprint("\tsearching LD_LIBRARY_PATH='%s'\n", _dl_library_path);
-		if ((tpnt1 = search_for_named_library(libname, secure, _dl_library_path, rpnt)) != NULL)
+		if ((tpnt1 = search_for_named_library(libname, rflags, _dl_library_path, rpnt)) != NULL)
 		{
 			return tpnt1;
 		}
 	}
-
+#endif
 	/*
 	 * The ABI specifies that RUNPATH is searched after LD_LIBRARY_PATH.
 	 */
@@ -253,7 +254,7 @@ struct elf_resolve *_dl_load_shared_library(int secure, struct dyn_elf **rpnt,
 	if (pnt) {
 		pnt += (unsigned long) tpnt->dynamic_info[DT_STRTAB];
 		_dl_if_debug_dprint("\tsearching RUNPATH='%s'\n", pnt);
-		if ((tpnt1 = search_for_named_library(libname, secure, pnt, rpnt)) != NULL)
+		if ((tpnt1 = search_for_named_library(libname, rflags, pnt, rpnt)) != NULL)
 			return tpnt1;
 	}
 #endif
@@ -276,25 +277,25 @@ struct elf_resolve *_dl_load_shared_library(int secure, struct dyn_elf **rpnt,
 			     || libent[i].flags == LIB_ELF_LIBC0
 			     ||	libent[i].flags == LIB_ELF_LIBC5)
 			 && _dl_strcmp(libname, strs + libent[i].sooffset) == 0
-			 && (tpnt1 = _dl_load_elf_shared_library(secure, rpnt, strs + libent[i].liboffset))
+			 && (tpnt1 = _dl_load_elf_shared_library(rflags, rpnt, strs + libent[i].liboffset))
 			) {
 				return tpnt1;
 			}
 		}
 	}
 #endif
-
+#if defined SHARED && defined __LDSO_SEARCH_INTERP_PATH__
 	/* Look for libraries wherever the shared library loader
 	 * was installed */
 	_dl_if_debug_dprint("\tsearching ldso dir='%s'\n", _dl_ldsopath);
-	tpnt1 = search_for_named_library(libname, secure, _dl_ldsopath, rpnt);
+	tpnt1 = search_for_named_library(libname, rflags, _dl_ldsopath, rpnt);
 	if (tpnt1 != NULL)
 		return tpnt1;
-
+#endif
 	/* Lastly, search the standard list of paths for the library.
 	   This list must exactly match the list in uClibc/ldso/util/ldd.c */
 	_dl_if_debug_dprint("\tsearching full lib path list\n");
-	tpnt1 = search_for_named_library(libname, secure,
+	tpnt1 = search_for_named_library(libname, rflags,
 					UCLIBC_RUNTIME_PREFIX "lib:"
 					UCLIBC_RUNTIME_PREFIX "usr/lib"
 #ifndef __LDSO_CACHE_SUPPORT__
@@ -314,6 +315,124 @@ goof:
 	return NULL;
 }
 
+/* Define the _dl_library_offset for the architectures that need it */
+DL_DEF_LIB_OFFSET;
+
+/*
+ * Make a writeable mapping of a segment, regardless of whether PF_W is
+ * set or not.
+ */
+static void *
+map_writeable (int infile, ElfW(Phdr) *ppnt, int piclib, int flags,
+	       unsigned long libaddr)
+{
+	int prot_flags = ppnt->p_flags | PF_W;
+	char *status, *retval;
+	char *tryaddr;
+	ssize_t size;
+	unsigned long map_size;
+	char *cpnt;
+	char *piclib2map = NULL;
+
+	if (piclib == 2 &&
+	    /* We might be able to avoid this call if memsz doesn't
+	       require an additional page, but this would require mmap
+	       to always return page-aligned addresses and a whole
+	       number of pages allocated.  Unfortunately on uClinux
+	       may return misaligned addresses and may allocate
+	       partial pages, so we may end up doing unnecessary mmap
+	       calls.
+
+	       This is what we could do if we knew mmap would always
+	       return aligned pages:
+
+	       ((ppnt->p_vaddr + ppnt->p_filesz + ADDR_ALIGN) &
+	       PAGE_ALIGN) < ppnt->p_vaddr + ppnt->p_memsz)
+
+	       Instead, we have to do this:  */
+	    ppnt->p_filesz < ppnt->p_memsz)
+	{
+		piclib2map = (char *)
+			_dl_mmap(0, (ppnt->p_vaddr & ADDR_ALIGN) + ppnt->p_memsz,
+				 LXFLAGS(prot_flags), flags | MAP_ANONYMOUS, -1, 0);
+		if (_dl_mmap_check_error(piclib2map))
+			return 0;
+	}
+
+	tryaddr = piclib == 2 ? piclib2map
+		: ((char *) (piclib ? libaddr : DL_GET_LIB_OFFSET()) +
+		   (ppnt->p_vaddr & PAGE_ALIGN));
+
+	size = (ppnt->p_vaddr & ADDR_ALIGN) + ppnt->p_filesz;
+
+	/* For !MMU, mmap to fixed address will fail.
+	   So instead of desperately call mmap and fail,
+	   we set status to MAP_FAILED to save a call
+	   to mmap ().  */
+#ifndef __ARCH_USE_MMU__
+	if (piclib2map == 0)
+#endif
+		status = (char *) _dl_mmap
+			(tryaddr, size, LXFLAGS(prot_flags),
+			 flags | (piclib2map ? MAP_FIXED : 0),
+			 infile, ppnt->p_offset & OFFS_ALIGN);
+#ifndef __ARCH_USE_MMU__
+	else
+		status = MAP_FAILED;
+#endif
+#ifdef _DL_PREAD
+	if (_dl_mmap_check_error(status) && piclib2map
+	    && (_DL_PREAD (infile, tryaddr, size,
+			   ppnt->p_offset & OFFS_ALIGN) == size))
+		status = tryaddr;
+#endif
+	if (_dl_mmap_check_error(status) || (tryaddr && tryaddr != status))
+		return 0;
+
+	if (piclib2map)
+		retval = piclib2map;
+	else
+		retval = status;
+
+	/* Now we want to allocate and zero-out any data from the end
+	   of the region we mapped in from the file (filesz) to the
+	   end of the loadable segment (memsz).  We may need
+	   additional pages for memsz, that we map in below, and we
+	   can count on the kernel to zero them out, but we have to
+	   zero out stuff in the last page that we mapped in from the
+	   file.  However, we can't assume to have actually obtained
+	   full pages from the kernel, since we didn't ask for them,
+	   and uClibc may not give us full pages for small
+	   allocations.  So only zero out up to memsz or the end of
+	   the page, whichever comes first.  */
+
+	/* CPNT is the beginning of the memsz portion not backed by
+	   filesz.  */
+	cpnt = (char *) (status + size);
+
+	/* MAP_SIZE is the address of the
+	   beginning of the next page.  */
+	map_size = (ppnt->p_vaddr + ppnt->p_filesz
+		    + ADDR_ALIGN) & PAGE_ALIGN;
+
+	_dl_memset (cpnt, 0,
+		    MIN (map_size
+			 - (ppnt->p_vaddr
+			    + ppnt->p_filesz),
+			 ppnt->p_memsz
+			 - ppnt->p_filesz));
+
+	if (map_size < ppnt->p_vaddr + ppnt->p_memsz && !piclib2map) {
+		tryaddr = map_size + (char*)(piclib ? libaddr : 0);
+		status = (char *) _dl_mmap(tryaddr,
+					   ppnt->p_vaddr + ppnt->p_memsz - map_size,
+					   LXFLAGS(prot_flags),
+					   flags | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+		if (_dl_mmap_check_error(status) || tryaddr != status)
+			return NULL;
+	}
+	return retval;
+}
 
 /*
  * Read one ELF library into memory, mmap it into the correct locations and
@@ -321,8 +440,8 @@ goof:
  * are required.
  */
 
-struct elf_resolve *_dl_load_elf_shared_library(int secure,
-	struct dyn_elf **rpnt, char *libname)
+struct elf_resolve *_dl_load_elf_shared_library(unsigned rflags,
+	struct dyn_elf **rpnt, const char *libname)
 {
 	ElfW(Ehdr) *epnt;
 	unsigned long dynamic_addr = 0;
@@ -337,6 +456,7 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 	unsigned long *lpnt;
 	unsigned long libaddr;
 	unsigned long minvma = 0xffffffff, maxvma = 0;
+	unsigned int rtld_flags;
 	int i, flags, piclib, infile;
 	ElfW(Addr) relro_addr = 0;
 	size_t relro_size = 0;
@@ -357,9 +477,9 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 		_dl_close(infile);
 		return NULL;
 	}
-	/* If we are in secure mode (i.e. a setu/gid binary using LD_PRELOAD),
+	/* If we are in secure mode (i.e. a setuid/gid binary using LD_PRELOAD),
 	   we don't load the library if it isn't setuid. */
-	if (secure) {
+	if (rflags & DL_RESOLVE_SECURE) {
 		if (!(st.st_mode & S_ISUID)) {
 			_dl_close(infile);
 			return NULL;
@@ -374,6 +494,10 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 			_dl_close(infile);
 			return tpnt;
 		}
+	}
+	if (rflags & DL_RESOLVE_NOLOAD) {
+		_dl_close(infile);
+		return NULL;
 	}
 	header = _dl_mmap((void *) 0, _dl_pagesize, PROT_READ | PROT_WRITE,
 			MAP_PRIVATE | MAP_ANONYMOUS | MAP_UNINITIALIZE, -1, 0);
@@ -396,11 +520,15 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 		return NULL;
 	}
 
-	if ((epnt->e_type != ET_DYN) || (epnt->e_machine != MAGIC1
+	if ((epnt->e_type != ET_DYN
+#ifdef __LDSO_STANDALONE_SUPPORT__
+		&& epnt->e_type != ET_EXEC
+#endif
+		) || (epnt->e_machine != MAGIC1
 #ifdef MAGIC2
 				&& epnt->e_machine != MAGIC2
 #endif
-				))
+			))
 	{
 		_dl_internal_error_number =
 			(epnt->e_type != ET_DYN ? LD_ERROR_NOTDYN : LD_ERROR_NOTMAGIC);
@@ -425,7 +553,7 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 
 		if (ppnt->p_type == PT_LOAD) {
 			/* See if this is a PIC library. */
-			if (i == 0 && ppnt->p_vaddr > 0x1000000) {
+			if (minvma == 0xffffffff && ppnt->p_vaddr > 0x1000000) {
 				piclib = 0;
 				minvma = ppnt->p_vaddr;
 			}
@@ -461,19 +589,23 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 		ppnt++;
 	}
 
+#ifdef __LDSO_STANDALONE_SUPPORT__
+	if (epnt->e_type == ET_EXEC)
+		piclib = 0;
+#endif
+
 	DL_CHECK_LIB_TYPE (epnt, piclib, _dl_progname, libname);
 
 	maxvma = (maxvma + ADDR_ALIGN) & PAGE_ALIGN;
-	minvma = minvma & ~0xffffU;
+	minvma = minvma & ~ADDR_ALIGN;
 
 	flags = MAP_PRIVATE /*| MAP_DENYWRITE */ ;
-	if (!piclib)
-		flags |= MAP_FIXED;
 
 	if (piclib == 0 || piclib == 1) {
 		status = (char *) _dl_mmap((char *) (piclib ? 0 : minvma),
 				maxvma - minvma, PROT_NONE, flags | MAP_ANONYMOUS, -1, 0);
 		if (_dl_mmap_check_error(status)) {
+		cant_map:
 			_dl_dprintf(2, "%s:%i: can't map '%s'\n", _dl_progname, __LINE__, libname);
 			_dl_internal_error_number = LD_ERROR_MMAP_FAILED;
 			_dl_close(infile);
@@ -487,15 +619,20 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 	/* Get the memory to store the library */
 	ppnt = (ElfW(Phdr) *)(intptr_t) & header[epnt->e_phoff];
 
-	DL_INIT_LOADADDR(lib_loadaddr, libaddr, ppnt, epnt->e_phnum);
+	DL_INIT_LOADADDR(lib_loadaddr, libaddr - minvma, ppnt, epnt->e_phnum);
+	/* Set _dl_library_offset to lib_loadaddr or 0. */
+	DL_SET_LIB_OFFSET(lib_loadaddr);
 
 	for (i = 0; i < epnt->e_phnum; i++) {
 		if (DL_IS_SPECIAL_SEGMENT (epnt, ppnt)) {
 			char *addr;
 
 			addr = DL_MAP_SEGMENT (epnt, ppnt, infile, flags);
-			if (addr == NULL)
+			if (addr == NULL) {
+			cant_map1:
+				DL_LOADADDR_UNMAP (lib_loadaddr, maxvma - minvma);
 				goto cant_map;
+			}
 
 			DL_INIT_LOADADDR_HDR (lib_loadaddr, addr, ppnt);
 			ppnt++;
@@ -509,152 +646,14 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 			char *tryaddr;
 			ssize_t size;
 
-			/* See if this is a PIC library. */
-			if (i == 0 && ppnt->p_vaddr > 0x1000000) {
-				piclib = 0;
-				/* flags |= MAP_FIXED; */
-			}
-
 			if (ppnt->p_flags & PF_W) {
-				unsigned long map_size;
-				char *cpnt;
-				char *piclib2map = 0;
-
-				if (piclib == 2 &&
-				    /* We might be able to avoid this
-				       call if memsz doesn't require
-				       an additional page, but this
-				       would require mmap to always
-				       return page-aligned addresses
-				       and a whole number of pages
-				       allocated.  Unfortunately on
-				       uClinux may return misaligned
-				       addresses and may allocate
-				       partial pages, so we may end up
-				       doing unnecessary mmap calls.
-
-				       This is what we could do if we
-				       knew mmap would always return
-				       aligned pages:
-
-				    ((ppnt->p_vaddr + ppnt->p_filesz
-				      + ADDR_ALIGN)
-				     & PAGE_ALIGN)
-				    < ppnt->p_vaddr + ppnt->p_memsz)
-
-				       Instead, we have to do this:  */
-				    ppnt->p_filesz < ppnt->p_memsz)
-				  {
-				    piclib2map = (char *)
-				      _dl_mmap(0, (ppnt->p_vaddr & ADDR_ALIGN)
-					       + ppnt->p_memsz,
-					       LXFLAGS(ppnt->p_flags),
-					       flags | MAP_ANONYMOUS, -1, 0);
-				    if (_dl_mmap_check_error(piclib2map))
-				      goto cant_map;
-				    DL_INIT_LOADADDR_HDR
-				      (lib_loadaddr, piclib2map
-				       + (ppnt->p_vaddr & ADDR_ALIGN), ppnt);
-				  }
-
-				tryaddr = piclib == 2 ? piclib2map
-				  : ((char*) (piclib ? libaddr : 0) +
-				     (ppnt->p_vaddr & PAGE_ALIGN));
-
-				size = (ppnt->p_vaddr & ADDR_ALIGN)
-				  + ppnt->p_filesz;
-
-				/* For !MMU, mmap to fixed address will fail.
-				   So instead of desperately call mmap and fail,
-				   we set status to MAP_FAILED to save a call
-				   to mmap ().  */
-#ifndef __ARCH_USE_MMU__
-				if (piclib2map == 0)
-#endif
-				  status = (char *) _dl_mmap
-				    (tryaddr, size, LXFLAGS(ppnt->p_flags),
-				     flags | (piclib2map ? MAP_FIXED : 0),
-				     infile, ppnt->p_offset & OFFS_ALIGN);
-#ifndef __ARCH_USE_MMU__
-				else
-				  status = MAP_FAILED;
-#endif
-#ifdef _DL_PREAD
-				if (_dl_mmap_check_error(status) && piclib2map
-				    && (_DL_PREAD (infile, tryaddr, size,
-						   ppnt->p_offset & OFFS_ALIGN)
-					== size))
-				  status = tryaddr;
-#endif
-				if (_dl_mmap_check_error(status)
-				    || (tryaddr && tryaddr != status)) {
-				cant_map:
-					_dl_dprintf(2, "%s:%i: can't map '%s'\n",
-							_dl_progname, __LINE__, libname);
-					_dl_internal_error_number = LD_ERROR_MMAP_FAILED;
-					DL_LOADADDR_UNMAP (lib_loadaddr, maxvma - minvma);
-					_dl_close(infile);
-					_dl_munmap(header, _dl_pagesize);
-					return NULL;
-				}
-
-				if (! piclib2map) {
-				  DL_INIT_LOADADDR_HDR
-				    (lib_loadaddr, status
-				     + (ppnt->p_vaddr & ADDR_ALIGN), ppnt);
-				}
-				/* Now we want to allocate and
-				   zero-out any data from the end of
-				   the region we mapped in from the
-				   file (filesz) to the end of the
-				   loadable segment (memsz).  We may
-				   need additional pages for memsz,
-				   that we map in below, and we can
-				   count on the kernel to zero them
-				   out, but we have to zero out stuff
-				   in the last page that we mapped in
-				   from the file.  However, we can't
-				   assume to have actually obtained
-				   full pages from the kernel, since
-				   we didn't ask for them, and uClibc
-				   may not give us full pages for
-				   small allocations.  So only zero
-				   out up to memsz or the end of the
-				   page, whichever comes first.  */
-
-				/* CPNT is the beginning of the memsz
-				   portion not backed by filesz.  */
-				cpnt = (char *) (status + size);
-
-				/* MAP_SIZE is the address of the
-				   beginning of the next page.  */
-				map_size = (ppnt->p_vaddr + ppnt->p_filesz
-					    + ADDR_ALIGN) & PAGE_ALIGN;
-
-#ifndef MIN
-# define MIN(a,b) ((a) < (b) ? (a) : (b))
-#endif
-				_dl_memset (cpnt, 0,
-					    MIN (map_size
-						 - (ppnt->p_vaddr
-						    + ppnt->p_filesz),
-						 ppnt->p_memsz
-						 - ppnt->p_filesz));
-
-				if (map_size < ppnt->p_vaddr + ppnt->p_memsz
-				    && !piclib2map) {
-					tryaddr = map_size + (char*)(piclib ? libaddr : 0);
-					status = (char *) _dl_mmap(tryaddr,
-						ppnt->p_vaddr + ppnt->p_memsz - map_size,
-						LXFLAGS(ppnt->p_flags), flags | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
-					if (_dl_mmap_check_error(status)
-					    || tryaddr != status)
-						goto cant_map;
-				}
+				status = map_writeable (infile, ppnt, piclib, flags, libaddr);
+				if (status == NULL)
+					goto cant_map1;
 			} else {
 				tryaddr = (piclib == 2 ? 0
 					   : (char *) (ppnt->p_vaddr & PAGE_ALIGN)
-					   + (piclib ? libaddr : 0));
+					   + (piclib ? libaddr : DL_GET_LIB_OFFSET()));
 				size = (ppnt->p_vaddr & ADDR_ALIGN) + ppnt->p_filesz;
 				status = (char *) _dl_mmap
 					   (tryaddr, size, LXFLAGS(ppnt->p_flags),
@@ -663,11 +662,11 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 					    infile, ppnt->p_offset & OFFS_ALIGN);
 				if (_dl_mmap_check_error(status)
 				    || (tryaddr && tryaddr != status))
-				  goto cant_map;
-				DL_INIT_LOADADDR_HDR
-				  (lib_loadaddr, status
-				   + (ppnt->p_vaddr & ADDR_ALIGN), ppnt);
+				  goto cant_map1;
 			}
+			DL_INIT_LOADADDR_HDR(lib_loadaddr,
+					     status + (ppnt->p_vaddr & ADDR_ALIGN),
+					     ppnt);
 
 			/* if (libaddr == 0 && piclib) {
 			   libaddr = (unsigned long) status;
@@ -676,10 +675,16 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 		}
 		ppnt++;
 	}
-	_dl_close(infile);
 
-	/* For a non-PIC library, the addresses are all absolute */
+	/*
+	 * The dynamic_addr must be take into acount lib_loadaddr value, to note
+	 * it is zero when the SO has been mapped to the elf's physical addr
+	 */
+#ifdef __LDSO_PRELINK_SUPPORT__
+	if (DL_GET_LIB_OFFSET()) {
+#else
 	if (piclib) {
+#endif
 		dynamic_addr = (unsigned long) DL_RELOC_ADDR(lib_loadaddr, dynamic_addr);
 	}
 
@@ -695,12 +700,13 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 		_dl_dprintf(2, "%s: '%s' is missing a dynamic section\n",
 				_dl_progname, libname);
 		_dl_munmap(header, _dl_pagesize);
+		_dl_close(infile);
 		return NULL;
 	}
 
 	dpnt = (ElfW(Dyn) *) dynamic_addr;
 	_dl_memset(dynamic_info, 0, sizeof(dynamic_info));
-	_dl_parse_dynamic_info(dpnt, dynamic_info, NULL, lib_loadaddr);
+	rtld_flags = _dl_parse_dynamic_info(dpnt, dynamic_info, NULL, lib_loadaddr);
 	/* If the TEXTREL is set, this means that we need to make the pages
 	   writable before we perform relocations.  Do this now. They get set
 	   back again later. */
@@ -710,10 +716,26 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 		ppnt = (ElfW(Phdr) *)(intptr_t) & header[epnt->e_phoff];
 		for (i = 0; i < epnt->e_phnum; i++, ppnt++) {
 			if (ppnt->p_type == PT_LOAD && !(ppnt->p_flags & PF_W)) {
-				_dl_mprotect((void *) ((piclib ? libaddr : 0) +
+#ifdef __ARCH_USE_MMU__
+				_dl_mprotect((void *) ((piclib ? libaddr : DL_GET_LIB_OFFSET()) +
 							(ppnt->p_vaddr & PAGE_ALIGN)),
 						(ppnt->p_vaddr & ADDR_ALIGN) + (unsigned long) ppnt->p_filesz,
 						PROT_READ | PROT_WRITE | PROT_EXEC);
+#else
+				void *new_addr;
+				new_addr = map_writeable (infile, ppnt, piclib, flags, libaddr);
+				if (!new_addr) {
+					_dl_dprintf(_dl_debug_file, "Can't modify %s's text section.",
+						    libname);
+					_dl_exit(1);
+				}
+				DL_UPDATE_LOADADDR_HDR(lib_loadaddr,
+						       new_addr + (ppnt->p_vaddr & ADDR_ALIGN),
+						       ppnt);
+				/* This has invalidated all pointers into the previously readonly segment.
+				   Update any them to point into the remapped segment.  */
+				_dl_parse_dynamic_info(dpnt, dynamic_info, NULL, lib_loadaddr);
+#endif
 			}
 		}
 #else
@@ -724,21 +746,30 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 #endif
 	}
 
+	_dl_close(infile);
+
 	tpnt = _dl_add_elf_hash_table(libname, lib_loadaddr, dynamic_info,
 			dynamic_addr, 0);
+	tpnt->mapaddr = libaddr;
 	tpnt->relro_addr = relro_addr;
 	tpnt->relro_size = relro_size;
 	tpnt->st_dev = st.st_dev;
 	tpnt->st_ino = st.st_ino;
-	tpnt->ppnt = (ElfW(Phdr) *) DL_RELOC_ADDR(tpnt->loadaddr, epnt->e_phoff);
+	tpnt->ppnt = (ElfW(Phdr) *)
+		DL_RELOC_ADDR(DL_GET_RUN_ADDR(tpnt->loadaddr, tpnt->mapaddr),
+		epnt->e_phoff);
 	tpnt->n_phent = epnt->e_phnum;
+	tpnt->rtld_flags |= rtld_flags;
+#ifdef __LDSO_STANDALONE_SUPPORT__
+	tpnt->l_entry = epnt->e_entry;
+#endif
 
 #if defined(USE_TLS) && USE_TLS
 	if (tlsppnt) {
 		_dl_debug_early("Found TLS header for %s\n", libname);
-#if NO_TLS_OFFSET != 0
+# if NO_TLS_OFFSET != 0
 		tpnt->l_tls_offset = NO_TLS_OFFSET;
-#endif
+# endif
 		tpnt->l_tls_blocksize = tlsppnt->p_memsz;
 		tpnt->l_tls_align = tlsppnt->p_align;
 		if (tlsppnt->p_align == 0)
@@ -753,12 +784,20 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 		tpnt->l_tls_modid = _dl_next_tls_modid ();
 
 		/* We know the load address, so add it to the offset. */
+#ifdef __LDSO_STANDALONE_SUPPORT__
+		if ((tpnt->l_tls_initimage != NULL) && piclib)
+#else
 		if (tpnt->l_tls_initimage != NULL)
+#endif
 		{
+# ifdef __SUPPORT_LD_DEBUG_EARLY__
 			unsigned int tmp = (unsigned int) tpnt->l_tls_initimage;
 			tpnt->l_tls_initimage = (char *) tlsppnt->p_vaddr + tpnt->loadaddr;
 			_dl_debug_early("Relocated TLS initial image from %x to %x (size = %x)\n", tmp, tpnt->l_tls_initimage, tpnt->l_tls_initimage_size);
 			tmp = 0;
+# else
+			tpnt->l_tls_initimage = (char *) tlsppnt->p_vaddr + tpnt->loadaddr;
+# endif
 		}
 	}
 #endif
@@ -766,7 +805,12 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 	/*
 	 * Add this object into the symbol chain
 	 */
-	if (*rpnt) {
+	if (*rpnt
+#ifdef __LDSO_STANDALONE_SUPPORT__
+		/* Do not create a new chain entry for the main executable */
+		&& (*rpnt)->dyn
+#endif
+		) {
 		(*rpnt)->next = _dl_malloc(sizeof(struct dyn_elf));
 		_dl_memset((*rpnt)->next, 0, sizeof(struct dyn_elf));
 		(*rpnt)->next->prev = (*rpnt);
@@ -783,9 +827,12 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 	}
 #endif
 	(*rpnt)->dyn = tpnt;
-	tpnt->symbol_scope = _dl_symbol_tables;
 	tpnt->usage_count++;
+#ifdef __LDSO_STANDALONE_SUPPORT__
+	tpnt->libtype = (epnt->e_type == ET_DYN) ? elf_lib : elf_executable;
+#else
 	tpnt->libtype = elf_lib;
+#endif
 
 	/*
 	 * OK, the next thing we need to do is to insert the dynamic linker into
@@ -800,6 +847,78 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 		INIT_GOT(lpnt, tpnt);
 	}
 
+#ifdef __DSBT__
+	/* Handle DSBT initialization */
+	{
+		struct elf_resolve *t, *ref;
+		int idx = tpnt->loadaddr.map->dsbt_index;
+		unsigned *dsbt = tpnt->loadaddr.map->dsbt_table;
+
+		if (idx == 0) {
+			if (!dynamic_info[DT_TEXTREL]) {
+				/* This DSO has not been assigned an index. */
+				_dl_dprintf(2, "%s: '%s' is missing a dsbt index assignment!\n",
+					    _dl_progname, libname);
+				_dl_exit(1);
+			}
+			/* Find a dsbt table from another module. */
+			ref = NULL;
+			for (t = _dl_loaded_modules; t; t = t->next) {
+				if (ref == NULL && t != tpnt) {
+					ref = t;
+					break;
+				}
+			}
+			idx = tpnt->loadaddr.map->dsbt_size;
+			while (idx-- > 0)
+				if (!ref || ref->loadaddr.map->dsbt_table[idx] == NULL)
+					break;
+			if (idx <= 0) {
+				_dl_dprintf(2, "%s: '%s' caused DSBT table overflow!\n",
+					    _dl_progname, libname);
+				_dl_exit(1);
+			}
+			_dl_if_debug_dprint("\n\tfile='%s';  assigned index %d\n",
+					    libname, idx);
+			tpnt->loadaddr.map->dsbt_index = idx;
+
+		}
+
+		/*
+		 * Setup dsbt slot for this module in dsbt of all modules.
+		 */
+		ref = NULL;
+		for (t = _dl_loaded_modules; t; t = t->next) {
+			/* find a dsbt table from another module */
+			if (ref == NULL && t != tpnt) {
+				ref = t;
+
+				/* make sure index is not already used */
+				if (t->loadaddr.map->dsbt_table[idx]) {
+					struct elf_resolve *dup;
+					char *dup_name;
+
+					for (dup = _dl_loaded_modules; dup; dup = dup->next)
+						if (dup != tpnt && dup->loadaddr.map->dsbt_index == idx)
+							break;
+					if (dup)
+						dup_name = dup->libname;
+					else if (idx == 1)
+						dup_name = "runtime linker";
+					else
+						dup_name = "unknown library";
+					_dl_dprintf(2, "%s: '%s' dsbt index %d already used by %s!\n",
+						    _dl_progname, libname, idx, dup_name);
+					_dl_exit(1);
+				}
+			}
+			t->loadaddr.map->dsbt_table[idx] = (unsigned)dsbt;
+		}
+		if (ref)
+			_dl_memcpy(dsbt, ref->loadaddr.map->dsbt_table,
+				   tpnt->loadaddr.map->dsbt_size * sizeof(unsigned *));
+	}
+#endif
 	_dl_if_debug_dprint("\n\tfile='%s';  generating link map\n", libname);
 	_dl_if_debug_dprint("\t\tdynamic: %x  base: %x\n", dynamic_addr, DL_LOADADDR_BASE(lib_loadaddr));
 	_dl_if_debug_dprint("\t\t  entry: %x  phdr: %x  phnum: %x\n\n",
@@ -811,7 +930,7 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 }
 
 /* now_flag must be RTLD_NOW or zero */
-int _dl_fixup(struct dyn_elf *rpnt, int now_flag)
+int _dl_fixup(struct dyn_elf *rpnt, struct r_scope_elem *scope, int now_flag)
 {
 	int goof = 0;
 	struct elf_resolve *tpnt;
@@ -819,7 +938,7 @@ int _dl_fixup(struct dyn_elf *rpnt, int now_flag)
 	ElfW(Addr) reloc_addr;
 
 	if (rpnt->next)
-		goof = _dl_fixup(rpnt->next, now_flag);
+		goof = _dl_fixup(rpnt->next, scope, now_flag);
 	if (goof)
 		return goof;
 	tpnt = rpnt->dyn;
@@ -846,10 +965,13 @@ int _dl_fixup(struct dyn_elf *rpnt, int now_flag)
 		relative_count = tpnt->dynamic_info[DT_RELCONT_IDX];
 		if (relative_count) { /* Optimize the XX_RELATIVE relocations if possible */
 			reloc_size -= relative_count * sizeof(ELF_RELOC);
-			elf_machine_relative(tpnt->loadaddr, reloc_addr, relative_count);
+#ifdef __LDSO_PRELINK_SUPPORT__
+			if (tpnt->loadaddr || (!tpnt->dynamic_info[DT_GNU_PRELINKED_IDX]))
+#endif
+				elf_machine_relative(tpnt->loadaddr, reloc_addr, relative_count);
 			reloc_addr += relative_count * sizeof(ELF_RELOC);
 		}
-		goof += _dl_parse_relocation_information(rpnt,
+		goof += _dl_parse_relocation_information(rpnt, scope,
 				reloc_addr,
 				reloc_size);
 		tpnt->init_flag |= RELOCS_DONE;
@@ -865,7 +987,7 @@ int _dl_fixup(struct dyn_elf *rpnt, int now_flag)
 					tpnt->dynamic_info[DT_JMPREL],
 					tpnt->dynamic_info [DT_PLTRELSZ]);
 		} else {
-			goof += _dl_parse_relocation_information(rpnt,
+			goof += _dl_parse_relocation_information(rpnt, scope,
 					tpnt->dynamic_info[DT_JMPREL],
 					tpnt->dynamic_info[DT_PLTRELSZ]);
 		}
@@ -987,8 +1109,8 @@ char *_dl_strdup(const char *string)
 	return retval;
 }
 
-void _dl_parse_dynamic_info(ElfW(Dyn) *dpnt, unsigned long dynamic_info[],
-                            void *debug_addr, DL_LOADADDR_TYPE load_off)
+unsigned int _dl_parse_dynamic_info(ElfW(Dyn) *dpnt, unsigned long dynamic_info[],
+                                    void *debug_addr, DL_LOADADDR_TYPE load_off)
 {
-	__dl_parse_dynamic_info(dpnt, dynamic_info, debug_addr, load_off);
+	return __dl_parse_dynamic_info(dpnt, dynamic_info, debug_addr, load_off);
 }

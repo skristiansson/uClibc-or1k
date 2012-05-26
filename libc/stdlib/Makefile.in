@@ -12,8 +12,8 @@ include $(top_srcdir)libc/stdlib/malloc-simple/Makefile.in
 include $(top_srcdir)libc/stdlib/malloc-standard/Makefile.in
 
 CSRC-y := \
-	abort.c getenv.c mkdtemp.c realpath.c mkstemp.c \
-	rand.c random.c random_r.c setenv.c system.c div.c ldiv.c lldiv.c \
+	abort.c getenv.c mkdtemp.c realpath.c canonicalize.c mkstemp.c \
+	rand.c random.c random_r.c setenv.c div.c ldiv.c lldiv.c \
 	getpt.c drand48-iter.c jrand48.c \
 	jrand48_r.c lrand48.c lrand48_r.c mrand48.c mrand48_r.c nrand48.c \
 	nrand48_r.c rand_r.c srand48.c srand48_r.c seed48.c seed48_r.c \
@@ -27,9 +27,13 @@ CSRC-$(if $(findstring yy,$(UCLIBC_HAS_FLOATS)$(UCLIBC_SUSV3_LEGACY)),y) += \
 	gcvt.c
 CSRC-$(UCLIBC_SUSV3_LEGACY) += mktemp.c
 
+ifneq ($(UCLIBC_HAS_BACKTRACE),)
+CFLAGS-abort.c = -fasynchronous-unwind-tables
+endif
+
 # multi source stdlib.c
 CSRC-y += abs.c labs.c atoi.c atol.c strtol.c strtoul.c _stdlib_strto_l.c \
-	qsort.c bsearch.c \
+	qsort.c qsort_r.c bsearch.c rpmatch.c \
 	llabs.c atoll.c strtoll.c strtoull.c _stdlib_strto_ll.c
 # (aliases) strtoq.o strtouq.o
 CSRC-$(UCLIBC_HAS_FLOATS) += atof.c
@@ -65,7 +69,9 @@ STDLIB_SRC := $(patsubst %.c,$(STDLIB_DIR)/%.c,$(CSRC-y))
 STDLIB_OBJ := $(patsubst %.c,$(STDLIB_OUT)/%.o,$(CSRC-y))
 
 libc-y += $(STDLIB_OBJ)
-libc-static-y += $(STDLIB_OUT)/atexit.o
+libc-static-y += $(STDLIB_OUT)/atexit.o $(STDLIB_OUT)/system.o
+libc-shared-y += $(STDLIB_OUT)/system.oS
+
 # this should always be the PIC version, because it could be used in shared libs
 libc-nonshared-y += $(STDLIB_OUT)/atexit.os
 

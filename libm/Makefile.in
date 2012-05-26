@@ -20,11 +20,12 @@
 # by Erik Andersen <andersen@codepoet.org>
 #
 
-subdirs += libm
+subdirs += libm libm/$(TARGET_ARCH)
 
 CFLAGS-libm := -DNOT_IN_libc -DIS_IN_libm $(SSP_ALL_CFLAGS)
 CFLAGS-libm += -D_IEEE_LIBM
 
+LDFLAGS-$(UCLIBC_FORMAT_DSBT_ELF)-libm.so := -Wl,--dsbt-index=5
 LDFLAGS-libm.so := $(LDFLAGS)
 
 LIBS-libm.so := $(LIBS)
@@ -34,19 +35,18 @@ libm_FULL_NAME := libm-$(VERSION).so
 libm_DIR:=$(top_srcdir)libm
 libm_OUT:=$(top_builddir)libm
 
-# Fix builds for powerpc as there are different cores in this 
-# section now.`
-ifeq ($(TARGET_ARCH)-$(CONFIG_E500),powerpc-y)
-libm_ARCH_DIR:=$(libm_DIR)/$(TARGET_ARCH)/e500
-libm_ARCH_OUT:=$(libm_OUT)/$(TARGET_ARCH)/e500
-else
 libm_ARCH_DIR:=$(libm_DIR)/$(TARGET_ARCH)
 libm_ARCH_OUT:=$(libm_OUT)/$(TARGET_ARCH)
+
+ifneq ($(TARGET_SUBARCH),)
+libm_SUBARCH_DIR:=$(libm_DIR)/$(TARGET_ARCH)/$(TARGET_SUBARCH)
+libm_SUBARCH_OUT:=$(libm_OUT)/$(TARGET_ARCH)/$(TARGET_SUBARCH)
 endif
 
 ifeq ($(UCLIBC_HAS_FPU),y)
 ifeq ($(DO_C99_MATH),y)
 -include $(libm_ARCH_DIR)/Makefile.arch
+-include $(libm_SUBARCH_DIR)/Makefile.arch
 endif
 endif
 
@@ -72,7 +72,8 @@ libm_CSRC := \
 	s_fpclassify.c s_fpclassifyf.c s_signbit.c s_signbitf.c \
 	s_isnan.c s_isnanf.c s_isinf.c s_isinff.c s_finitef.c \
 	s_fdim.c s_fma.c s_fmax.c s_fmin.c \
-	s_remquo.c w_exp2.c
+	s_remquo.c w_exp2.c \
+	cexp.c sincos.c
 
 # Not implemented [yet?], see comment in float_wrappers.c:
 # fdimf.o fmaf.o fmaxf.o fminf.o
@@ -219,11 +220,8 @@ endif
 ifeq ($(UCLIBC_HAS_FPU),y)
 ifeq ($(DO_C99_MATH),y)
 ifneq ($(strip $(libm_ARCH_OBJS)),)
-ifeq ($(TARGET_ARCH)-$(CONFIG_E500),powerpc-y)
-CFLAGS-libm/$(TARGET_ARCH)/e500/ := $(CFLAGS-libm)
-else
 CFLAGS-libm/$(TARGET_ARCH)/ := $(CFLAGS-libm)
-endif
+CFLAGS-libm/$(TARGET_ARCH)/$(TARGET_SUBARCH)/ := $(CFLAGS-libm)
 
 # remove generic sources, if arch specific version is present
 ifneq ($(strip $(libm_ARCH_SRC)),)
@@ -278,10 +276,10 @@ $(top_builddir)lib/libm.so: $(top_builddir)lib/libm.a $(libc.depend)
 else
 $(top_builddir)lib/libm.so: $(libm_OUT)/libm_so.a $(libc.depend)
 endif
-	$(call link.so,$(libm_FULL_NAME),$(MAJOR_VERSION))
+	$(call link.so,$(libm_FULL_NAME),$(ABI_VERSION))
 else
 $(top_builddir)lib/libm.so: $(libm_OUT)/libm.oS | $(libc.depend)
-	$(call linkm.so,$(libm_FULL_NAME),$(MAJOR_VERSION))
+	$(call linkm.so,$(libm_FULL_NAME),$(ABI_VERSION))
 endif
 
 $(libm_OUT)/libm_so.a: $(libm-so-y)

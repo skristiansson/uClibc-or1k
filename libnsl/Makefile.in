@@ -9,6 +9,7 @@ subdirs += libnsl
 
 CFLAGS-libnsl := -DNOT_IN_libc -DIS_IN_libnsl $(SSP_ALL_CFLAGS)
 
+LDFLAGS-$(UCLIBC_FORMAT_DSBT_ELF)-libnsl.so := -Wl,--dsbt-index=6
 LDFLAGS-libnsl.so := $(LDFLAGS) $(call link.asneeded,-lc)
 
 LIBS-libnsl.so := $(LIBS)
@@ -37,7 +38,7 @@ $(top_builddir)lib/libnsl.so: $(top_builddir)lib/libnsl.a $(libc.depend)
 else
 $(top_builddir)lib/libnsl.so: $(libnsl_OUT)/libnsl_so.a $(libc.depend)
 endif
-	$(call link.so,$(libnsl_FULL_NAME),$(MAJOR_VERSION))
+	$(call link.so,$(libnsl_FULL_NAME),$(ABI_VERSION))
 
 $(libnsl_OUT)/libnsl_so.a: $(libnsl-so-y)
 	$(Q)$(RM) $@

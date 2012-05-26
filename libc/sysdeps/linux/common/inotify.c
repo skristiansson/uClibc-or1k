@@ -15,10 +15,14 @@
 _syscall0(int, inotify_init)
 #endif
 
+#ifdef __NR_inotify_init1
+_syscall1(int, inotify_init1, int, flags)
+#endif
+
 #ifdef __NR_inotify_add_watch
 _syscall3(int, inotify_add_watch, int, fd, const char *, path, uint32_t, mask)
 #endif
 
 #ifdef __NR_inotify_rm_watch
-_syscall2(int, inotify_rm_watch, int, fd, uint32_t, wd)
+_syscall2(int, inotify_rm_watch, int, fd, int, wd)
 #endif

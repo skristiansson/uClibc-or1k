@@ -15,6 +15,7 @@
 /* Forward declarations for stuff defined in ld_hash.h */
 struct dyn_elf;
 struct elf_resolve;
+struct r_scope_elem;
 
 #include <dl-defs.h>
 #ifdef __LDSO_CACHE_SUPPORT__
@@ -25,21 +26,23 @@ static __inline__ void _dl_map_cache(void) { }
 static __inline__ void _dl_unmap_cache(void) { }
 #endif
 
+#define DL_RESOLVE_SECURE		0x0001
+#define DL_RESOLVE_NOLOAD		0x0002
 
 /* Function prototypes for non-static stuff in readelflib1.c */
 extern void _dl_parse_lazy_relocation_information(struct dyn_elf *rpnt,
 	unsigned long rel_addr, unsigned long rel_size);
 extern int _dl_parse_relocation_information(struct dyn_elf *rpnt,
-	unsigned long rel_addr, unsigned long rel_size);
-extern struct elf_resolve * _dl_load_shared_library(int secure,
+	struct r_scope_elem *scope, unsigned long rel_addr, unsigned long rel_size);
+extern struct elf_resolve * _dl_load_shared_library(unsigned rflags,
 	struct dyn_elf **rpnt, struct elf_resolve *tpnt, char *full_libname,
 	int trace_loaded_objects);
-extern struct elf_resolve * _dl_load_elf_shared_library(int secure,
-	struct dyn_elf **rpnt, char *libname);
+extern struct elf_resolve * _dl_load_elf_shared_library(unsigned rflags,
+	struct dyn_elf **rpnt, const char *libname);
 extern struct elf_resolve *_dl_check_if_named_library_is_loaded(const char *full_libname,
 	int trace_loaded_objects);
 extern int _dl_linux_resolve(void);
-extern int _dl_fixup(struct dyn_elf *rpnt, int flag);
+extern int _dl_fixup(struct dyn_elf *rpnt, struct r_scope_elem *scope, int flag);
 extern void _dl_protect_relro (struct elf_resolve *l);
 
 /*
@@ -84,33 +87,58 @@ extern void _dl_protect_relro (struct elf_resolve *l);
 #endif
 
 /* OS and/or GNU dynamic extensions */
+
+#define OS_NUM_BASE 1			/* for DT_RELOCCOUNT */
+
 #ifdef __LDSO_GNU_HASH_SUPPORT__
-# define OS_NUM 2 /* for DT_RELOCCOUNT and DT_GNU_HASH entries */
+# define OS_NUM_GNU_HASH	1   /* for DT_GNU_HASH entry */
 #else
-# define OS_NUM 1 /* for DT_RELOCCOUNT entry */
+# define OS_NUM_GNU_HASH	0
 #endif
+
+#ifdef __LDSO_PRELINK_SUPPORT__
+# define OS_NUM_PRELINK		6   /* for DT_GNU_PRELINKED entry */
+#else
+# define OS_NUM_PRELINK	0
+#endif
+
+#define OS_NUM	  (OS_NUM_BASE + OS_NUM_GNU_HASH + OS_NUM_PRELINK)
 
 #ifndef ARCH_DYNAMIC_INFO
   /* define in arch specific code, if needed */
 # define ARCH_NUM 0
 #endif
 
-#define DYNAMIC_SIZE (DT_NUM+OS_NUM+ARCH_NUM)
+#define DYNAMIC_SIZE (DT_NUM + OS_NUM + ARCH_NUM)
 /* Keep ARCH specific entries into dynamic section at the end of the array */
 #define DT_RELCONT_IDX (DYNAMIC_SIZE - OS_NUM - ARCH_NUM)
 
 #ifdef __LDSO_GNU_HASH_SUPPORT__
 /* GNU hash comes just after the relocation count */
 # define DT_GNU_HASH_IDX (DT_RELCONT_IDX + 1)
+#else
+# define DT_GNU_HASH_IDX DT_RELCONT_IDX
 #endif
 
-extern void _dl_parse_dynamic_info(ElfW(Dyn) *dpnt, unsigned long dynamic_info[],
-                                   void *debug_addr, DL_LOADADDR_TYPE load_off);
+#ifdef __LDSO_PRELINK_SUPPORT__
+/* GNU prelink comes just after the GNU hash if present */
+#define DT_GNU_PRELINKED_IDX  (DT_GNU_HASH_IDX + 1)
+#define DT_GNU_CONFLICT_IDX   (DT_GNU_HASH_IDX + 2)
+#define DT_GNU_CONFLICTSZ_IDX (DT_GNU_HASH_IDX + 3)
+#define DT_GNU_LIBLIST_IDX    (DT_GNU_HASH_IDX + 4)
+#define DT_GNU_LIBLISTSZ_IDX  (DT_GNU_HASH_IDX + 5)
+#define DT_CHECKSUM_IDX       (DT_GNU_HASH_IDX + 6)
+#endif
+
+extern unsigned int _dl_parse_dynamic_info(ElfW(Dyn) *dpnt, unsigned long dynamic_info[],
+                                           void *debug_addr, DL_LOADADDR_TYPE load_off);
 
 static __always_inline
-void __dl_parse_dynamic_info(ElfW(Dyn) *dpnt, unsigned long dynamic_info[],
-                             void *debug_addr, DL_LOADADDR_TYPE load_off)
+unsigned int __dl_parse_dynamic_info(ElfW(Dyn) *dpnt, unsigned long dynamic_info[],
+                                     void *debug_addr, DL_LOADADDR_TYPE load_off)
 {
+	unsigned int rtld_flags = 0;
+
 	for (; dpnt->d_tag; dpnt++) {
 		if (dpnt->d_tag < DT_NUM) {
 			dynamic_info[dpnt->d_tag] = dpnt->d_un.d_val;
@@ -138,12 +166,29 @@ void __dl_parse_dynamic_info(ElfW(Dyn) *dpnt, unsigned long dynamic_info[],
 		} else if (dpnt->d_tag < DT_LOPROC) {
 			if (dpnt->d_tag == DT_RELOCCOUNT)
 				dynamic_info[DT_RELCONT_IDX] = dpnt->d_un.d_val;
-			if (dpnt->d_tag == DT_FLAGS_1 &&
-			    (dpnt->d_un.d_val & DF_1_NOW))
-				dynamic_info[DT_BIND_NOW] = 1;
+			if (dpnt->d_tag == DT_FLAGS_1) {
+				if (dpnt->d_un.d_val & DF_1_NOW)
+					dynamic_info[DT_BIND_NOW] = 1;
+				if (dpnt->d_un.d_val & DF_1_NODELETE)
+					rtld_flags |= RTLD_NODELETE;
+			}
 #ifdef __LDSO_GNU_HASH_SUPPORT__
 			if (dpnt->d_tag == DT_GNU_HASH)
 				dynamic_info[DT_GNU_HASH_IDX] = dpnt->d_un.d_ptr;
+#endif
+#ifdef __LDSO_PRELINK_SUPPORT__
+			if (dpnt->d_tag == DT_GNU_PRELINKED)
+				dynamic_info[DT_GNU_PRELINKED_IDX] = dpnt->d_un.d_val;
+			if (dpnt->d_tag == DT_GNU_CONFLICT)
+				dynamic_info[DT_GNU_CONFLICT_IDX] = dpnt->d_un.d_ptr;
+			if (dpnt->d_tag == DT_GNU_CONFLICTSZ)
+				dynamic_info[DT_GNU_CONFLICTSZ_IDX] = dpnt->d_un.d_val;
+			if (dpnt->d_tag == DT_GNU_LIBLIST)
+				dynamic_info[DT_GNU_LIBLIST_IDX] = dpnt->d_un.d_ptr;
+			if (dpnt->d_tag == DT_GNU_LIBLISTSZ)
+				dynamic_info[DT_GNU_LIBLISTSZ_IDX] = dpnt->d_un.d_val;
+			if (dpnt->d_tag == DT_CHECKSUM)
+				dynamic_info[DT_CHECKSUM_IDX] = dpnt->d_un.d_val;
 #endif
 		}
 #ifdef ARCH_DYNAMIC_INFO
@@ -157,16 +202,34 @@ void __dl_parse_dynamic_info(ElfW(Dyn) *dpnt, unsigned long dynamic_info[],
 		if (dynamic_info[tag]) \
 			dynamic_info[tag] = (unsigned long) DL_RELOC_ADDR(load_off, dynamic_info[tag]); \
 	} while (0)
-	ADJUST_DYN_INFO(DT_HASH, load_off);
-	ADJUST_DYN_INFO(DT_PLTGOT, load_off);
-	ADJUST_DYN_INFO(DT_STRTAB, load_off);
-	ADJUST_DYN_INFO(DT_SYMTAB, load_off);
-	ADJUST_DYN_INFO(DT_RELOC_TABLE_ADDR, load_off);
-	ADJUST_DYN_INFO(DT_JMPREL, load_off);
+	/* Don't adjust .dynamic unnecessarily.  For FDPIC targets,
+	   we'd have to walk all the loadsegs to find out if it was
+	   actually unnecessary, so skip this optimization.  */
+#if !defined __FDPIC__ && !defined __DSBT__
+	if (load_off != 0)
+#endif
+	{
+		ADJUST_DYN_INFO(DT_HASH, load_off);
+		ADJUST_DYN_INFO(DT_PLTGOT, load_off);
+		ADJUST_DYN_INFO(DT_STRTAB, load_off);
+		ADJUST_DYN_INFO(DT_SYMTAB, load_off);
+		ADJUST_DYN_INFO(DT_RELOC_TABLE_ADDR, load_off);
+		ADJUST_DYN_INFO(DT_JMPREL, load_off);
 #ifdef __LDSO_GNU_HASH_SUPPORT__
-	ADJUST_DYN_INFO(DT_GNU_HASH_IDX, load_off);
+		ADJUST_DYN_INFO(DT_GNU_HASH_IDX, load_off);
+#endif
+	}
+#ifdef __DSBT__
+	/* Get the mapped address of the DSBT base.  */
+	ADJUST_DYN_INFO(DT_DSBT_BASE_IDX, load_off);
+
+	/* Initialize loadmap dsbt info.  */
+	load_off.map->dsbt_table = (void *)dynamic_info[DT_DSBT_BASE_IDX];
+	load_off.map->dsbt_size = dynamic_info[DT_DSBT_SIZE_IDX];
+	load_off.map->dsbt_index = dynamic_info[DT_DSBT_INDEX_IDX];
 #endif
 #undef ADJUST_DYN_INFO
+	return rtld_flags;
 }
 
 /* Reloc type classes as returned by elf_machine_type_class().

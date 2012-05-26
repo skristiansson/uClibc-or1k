@@ -57,16 +57,16 @@ endif
 endif
 
 XCOMMON_CFLAGS := -I$(top_builddir)test -D_GNU_SOURCE
-XWARNINGS      += $(call check_gcc,-Wstrict-prototypes,)
+XWARNINGS      += $(CFLAG_-Wstrict-prototypes)
 CFLAGS         := -nostdinc -I$(top_builddir)$(LOCAL_INSTALL_PATH)/usr/include
 CFLAGS         += $(XCOMMON_CFLAGS) $(KERNEL_INCLUDES) $(CC_INC)
 CFLAGS         += $(OPTIMIZATION) $(CPU_CFLAGS) $(XWARNINGS)
 
 # Can't add $(OPTIMIZATION) here, it may be target-specific.
 # Just adding -Os for now.
-HOST_CFLAGS    += $(XCOMMON_CFLAGS) -Os $(XWARNINGS)
+HOST_CFLAGS    += $(XCOMMON_CFLAGS) -Os $(XWARNINGS) -std=gnu99
 
-LDFLAGS        := $(CPU_LDFLAGS-y) -Wl,-z,defs -Wl,-z,now
+LDFLAGS        := $(CPU_LDFLAGS-y) -Wl,-z,now
 ifeq ($(DODEBUG),y)
 	CFLAGS        += -g
 	HOST_CFLAGS   += -g
@@ -78,8 +78,7 @@ else
 endif
 
 ifneq ($(HAVE_SHARED),y)
-	LDFLAGS       += -Wl,-static
-	HOST_LDFLAGS  += -Wl,-static
+	LDFLAGS       += -Wl,-static -static-libgcc
 endif
 
 LDFLAGS += -B$(top_builddir)lib -Wl,-rpath,$(top_builddir)lib -Wl,-rpath-link,$(top_builddir)lib
@@ -95,7 +94,7 @@ endif
 
 ifeq ($(LDSO_GNU_HASH_SUPPORT),y)
 # Check for binutils support is done on root Rules.mak
-LDFLAGS += -Wl,${LDFLAGS_GNUHASH}
+LDFLAGS += $(CFLAG_-Wl--hash-style=gnu)
 endif
 
 

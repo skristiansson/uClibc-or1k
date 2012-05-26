@@ -252,17 +252,25 @@ extern pthread_descr __pthread_main_thread;
    Initially 0, meaning that the current thread is (by definition)
    the initial thread. */
 
-/* For non-MMU systems also remember to stack top of the initial thread.
- * This is adapted when other stacks are malloc'ed since we don't know
- * the bounds a-priori. -StS */
-
 extern char *__pthread_initial_thread_bos;
 #ifndef __ARCH_USE_MMU__
-extern char *__pthread_initial_thread_tos;
+/* For non-MMU systems, we have no idea the bounds of the initial thread
+ * stack, so we have to track it on the fly relative to other stacks.  Do
+ * so by scaling back our assumptions on the limits of the bos/tos relative
+ * to the known mid point.  See also the comments in pthread_initialize(). */
+extern char *__pthread_initial_thread_tos, *__pthread_initial_thread_mid;
 #define NOMMU_INITIAL_THREAD_BOUNDS(tos,bos) \
-	if ((tos)>=__pthread_initial_thread_bos \
-	    && (bos)<__pthread_initial_thread_tos) \
-		__pthread_initial_thread_bos = (tos)+1
+	do { \
+		char *__tos = (tos); \
+		char *__bos = (bos); \
+		if (__tos >= __pthread_initial_thread_bos && \
+		    __bos < __pthread_initial_thread_tos) { \
+			if (__bos < __pthread_initial_thread_mid) \
+				__pthread_initial_thread_bos = __tos; \
+			else \
+				__pthread_initial_thread_tos = __bos; \
+		} \
+	} while (0)
 #else
 #define NOMMU_INITIAL_THREAD_BOUNDS(tos,bos) /* empty */
 #endif /* __ARCH_USE_MMU__ */
@@ -498,11 +506,13 @@ extern void __pthread_wait_for_restart_signal(pthread_descr self);
 extern void (*__pthread_restart)(pthread_descr);
 extern void (*__pthread_suspend)(pthread_descr);
 
+#if defined NOT_IN_libc && defined IS_IN_libpthread
 extern __typeof(pthread_mutex_init) __pthread_mutex_init attribute_hidden;
 extern __typeof(pthread_mutex_destroy) __pthread_mutex_destroy attribute_hidden;
 extern __typeof(pthread_mutex_lock) __pthread_mutex_lock attribute_hidden;
 extern __typeof(pthread_mutex_trylock) __pthread_mutex_trylock attribute_hidden;
-extern __typeof(pthread_mutex_unlock) __pthread_mutex_attribute_hidden;
+extern __typeof(pthread_mutex_unlock) __pthread_mutex_unlock attribute_hidden;
+#endif
 
 /* Prototypes for some of the new semaphore functions.  */
 extern int __new_sem_post (sem_t * sem);

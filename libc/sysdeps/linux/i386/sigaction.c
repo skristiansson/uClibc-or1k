@@ -41,12 +41,6 @@ int __libc_sigaction(int sig, const struct sigaction *act, struct sigaction *oac
 {
 	struct sigaction kact;
 
-#ifdef SIGCANCEL
-	if (sig == SIGCANCEL) {
-		__set_errno(EINVAL);
-		return -1;
-	}
-#endif
 	if (act) {
 		memcpy(&kact, act, sizeof(kact));
 		kact.sa_flags |= SA_RESTORER;
@@ -69,12 +63,6 @@ int __libc_sigaction(int sig, const struct sigaction *act, struct sigaction *oac
 	int result;
 	struct old_kernel_sigaction kact, koact;
 
-#ifdef SIGCANCEL
-	if (sig == SIGCANCEL) {
-		__set_errno(EINVAL);
-		return -1;
-	}
-#endif
 	if (act) {
 		kact.k_sa_handler = act->sa_handler;
 		kact.sa_mask = act->sa_mask.__val[0];
@@ -107,8 +95,13 @@ int __libc_sigaction(int sig, const struct sigaction *act, struct sigaction *oac
 
 
 #ifndef LIBC_SIGACTION
+# ifndef __UCLIBC_HAS_THREADS__
+strong_alias(__libc_sigaction,sigaction)
+libc_hidden_def(sigaction)
+# else
 weak_alias(__libc_sigaction,sigaction)
 libc_hidden_weak(sigaction)
+# endif
 #endif
 
 
@@ -121,16 +114,16 @@ libc_hidden_weak(sigaction)
    appropriate GDB maintainer.  */
 
 #define RESTORE(name, syscall) RESTORE2(name, syscall)
-#define RESTORE2(name, syscall) \
+
+#ifdef __NR_rt_sigaction
+/* The return code for realtime-signals.  */
+# define RESTORE2(name, syscall) \
 __asm__	(						\
 	".text\n"					\
 	"__" #name ":\n"				\
 	"	movl	$" #syscall ", %eax\n"		\
 	"	int	$0x80\n"			\
 );
-
-#ifdef __NR_rt_sigaction
-/* The return code for realtime-signals.  */
 RESTORE(restore_rt, __NR_rt_sigreturn)
 #endif
 
@@ -145,6 +138,5 @@ __asm__ (						\
 	"	movl	$" #syscall ", %eax\n"		\
 	"	int	$0x80\n"			\
 );
-
 RESTORE(restore, __NR_sigreturn)
 #endif

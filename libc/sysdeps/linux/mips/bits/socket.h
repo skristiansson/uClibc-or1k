@@ -54,10 +54,21 @@ enum __socket_type
   SOCK_SEQPACKET = 5,		/* Sequenced, reliable, connection-based,
 				   datagrams of fixed maximum length.  */
 #define SOCK_SEQPACKET SOCK_SEQPACKET
-  SOCK_PACKET = 10		/* Linux specific way of getting packets
+  SOCK_DCCP = 6,
+#define SOCK_DCCP SOCK_DCCP	/* Datagram Congestion Control Protocol.  */
+  SOCK_PACKET = 10,		/* Linux specific way of getting packets
 				   at the dev level.  For writing rarp and
 				   other similar things on the user level. */
 #define SOCK_PACKET SOCK_PACKET
+  /* Flags to be ORed into the type parameter of socket and socketpair and
+     used for the flags parameter of paccept.  */
+
+  SOCK_CLOEXEC = 02000000,	/* Atomically set close-on-exec flag for the
+                                   new descriptor(s).  */
+#define SOCK_CLOEXEC SOCK_CLOEXEC
+  SOCK_NONBLOCK = 0200		/* Atomically mark descriptor(s) as
+				   non-blocking.  */
+#define SOCK_NONBLOCK SOCK_NONBLOCK
 };
 
 /* Protocol families.  */
@@ -89,8 +100,18 @@ enum __socket_type
 #define	PF_IRDA		23	/* IRDA sockets.  */
 #define	PF_PPPOX	24	/* PPPoX sockets.  */
 #define	PF_WANPIPE	25	/* Wanpipe API sockets.  */
+#define	PF_LLC		26	/* Linux LLC.  */
+#define	PF_CAN		29	/* Controller Area Network.  */
+#define	PF_TIPC		30	/* TIPC sockets.  */
 #define	PF_BLUETOOTH	31	/* Bluetooth sockets.  */
-#define	PF_MAX		32	/* For now..  */
+#define	PF_IUCV		32	/* IUCV sockets.  */
+#define	PF_RXRPC	33	/* RxRPC sockets.  */
+#define	PF_ISDN		34	/* mISDN sockets.  */
+#define	PF_PHONET	35	/* Phonet sockets.  */
+#define	PF_IEEE802154	36	/* IEEE 802.15.4 sockets.  */
+#define	PF_CAIF		37	/* CAIF sockets.  */
+#define	PF_ALG		38	/* Algorithm sockets.  */
+#define	PF_MAX		39	/* For now..  */
 
 /* Address families.  */
 #define	AF_UNSPEC	PF_UNSPEC
@@ -121,7 +142,17 @@ enum __socket_type
 #define	AF_IRDA		PF_IRDA
 #define	AF_PPPOX	PF_PPPOX
 #define	AF_WANPIPE	PF_WANPIPE
+#define	AF_LLC		PF_LLC
+#define	AF_CAN		PF_CAN
+#define	AF_TIPC		PF_TIPC
 #define	AF_BLUETOOTH	PF_BLUETOOTH
+#define	AF_IUCV		PF_IUCV
+#define	AF_RXRPC	PF_RXRPC
+#define	AF_ISDN		PF_ISDN
+#define	AF_PHONET	PF_PHONET
+#define	AF_IEEE802154	PF_IEEE802154
+#define	AF_CAIF		PF_CAIF
+#define	AF_ALG		PF_ALG
 #define	AF_MAX		PF_MAX
 
 /* Socket level values.  Others are defined in the appropriate headers.
@@ -152,11 +183,7 @@ struct sockaddr
 
 /* Structure large enough to hold any socket address (with the historical
    exception of AF_UNIX).  We reserve 128 bytes.  */
-#if ULONG_MAX > 0xffffffff
-# define __ss_aligntype	__uint64_t
-#else
-# define __ss_aligntype	__uint32_t
-#endif
+#define __ss_aligntype	unsigned long int
 #define _SS_SIZE	128
 #define _SS_PADSIZE	(_SS_SIZE - (2 * sizeof (__ss_aligntype)))
 
@@ -206,8 +233,15 @@ enum
 #define	MSG_ERRQUEUE	MSG_ERRQUEUE
     MSG_NOSIGNAL	= 0x4000, /* Do not generate SIGPIPE.  */
 #define	MSG_NOSIGNAL	MSG_NOSIGNAL
-    MSG_MORE		= 0x8000  /* Sender will send more.  */
+    MSG_MORE		= 0x8000, /* Sender will send more.  */
 #define	MSG_MORE	MSG_MORE
+    MSG_WAITFORONE      = 0x10000, /* Wait for at least one packet to return.*/
+#define MSG_WAITFORONE  MSG_WAITFORONE
+
+    MSG_CMSG_CLOEXEC    = 0x40000000    /* Set close_on_exit for file
+					   descriptor received through
+					   SCM_RIGHTS.  */
+#define MSG_CMSG_CLOEXEC MSG_CMSG_CLOEXEC
   };
 
 

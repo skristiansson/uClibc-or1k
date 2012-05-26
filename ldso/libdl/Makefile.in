@@ -19,7 +19,12 @@ endif
 
 CFLAGS-libdl.c := -DLDSO_ELFINTERP=\"$(TARGET_ARCH)/elfinterp.c\"
 
-LDFLAGS-libdl.so := $(LDFLAGS) -Wl,-fini,dl_cleanup
+LDFLAGS-$(UCLIBC_FORMAT_DSBT_ELF)-libdl.so := -Wl,--dsbt-index=3
+LDFLAGS-libdl.so := $(LDFLAGS)
+
+ifeq ($(LDSO_NO_CLEANUP),)
+LDFLAGS-libdl.so += -Wl,-fini,dl_cleanup
+endif
 
 LIBS-libdl.so := $(LIBS) $(ldso)
 
@@ -44,7 +49,7 @@ lib-so-y += $(top_builddir)lib/libdl.so
 objclean-y += CLEAN_ldso/libdl
 
 $(top_builddir)lib/libdl.so: $(libdl_OUT)/libdl_so.a $(libc.depend)
-	$(call link.so,$(libdl_FULL_NAME),$(MAJOR_VERSION))
+	$(call link.so,$(libdl_FULL_NAME),$(ABI_VERSION))
 
 $(libdl_OUT)/libdl_so.a: $(libdl-so-y)
 	$(Q)$(RM) $@

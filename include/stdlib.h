@@ -50,9 +50,9 @@ __BEGIN_DECLS
    as well as POSIX.1 use of `int' for the status word.  */
 
 #  if defined __GNUC__ && !defined __cplusplus
-#   define __WAIT_INT(status)						      \
-  (__extension__ ({ union { __typeof(status) __in; int __i; } __u;	      \
-		    __u.__in = (status); __u.__i; }))
+#   define __WAIT_INT(status) \
+  (__extension__ (((union { __typeof(status) __in; int __i; }) \
+		   { .__in = (status) }).__i))
 #  else
 #   define __WAIT_INT(status)	(*(int *) &(status))
 #  endif
@@ -143,9 +143,11 @@ __END_NAMESPACE_C99
 extern size_t __ctype_get_mb_cur_max (void) __THROW __wur;
 #else
 #ifdef __UCLIBC_HAS_WCHAR__
-#define	MB_CUR_MAX	(_stdlib_mb_cur_max ())
+# define	MB_CUR_MAX	(_stdlib_mb_cur_max ())
 extern size_t _stdlib_mb_cur_max (void) __THROW __wur;
 libc_hidden_proto(_stdlib_mb_cur_max)
+#else
+# define	MB_CUR_MAX	1
 #endif
 #endif
 
@@ -163,7 +165,6 @@ libc_hidden_proto(atoi)
 /* Convert a string to a long integer.  */
 extern long int atol (__const char *__nptr)
      __THROW __attribute_pure__ __nonnull ((1)) __wur;
-libc_hidden_proto(atol)
 __END_NAMESPACE_STD
 
 #if defined __USE_ISOC99 || defined __USE_MISC
@@ -214,7 +215,7 @@ __END_NAMESPACE_STD
 
 /* Convert a string to a quadword integer.  */
 __extension__
-extern long long int strtoq (__const char *__restrict __nptr,
+extern quad_t strtoq (__const char *__restrict __nptr,
 			     char **__restrict __endptr, int __base)
      __THROW __nonnull ((1)) __wur;
 /* Convert a string to an unsigned quadword integer.  */
@@ -244,14 +245,14 @@ __END_NAMESPACE_C99
 #if defined __USE_GNU && defined __UCLIBC_HAS_XLOCALE__
 /* The concept of one static locale per category is not very well
    thought out.  Many applications will need to process its data using
-   information from several different locales.  Another application is
+   information from several different locales.  Another problem is
    the implementation of the internationalization handling in the
-   upcoming ISO C++ standard library.  To support this another set of
-   the functions using locale data exist which have an additional
+   ISO C++ standard library.  To support this another set of
+   the functions using locale data exist which take an additional
    argument.
 
-   Attention: all these functions are *not* standardized in any form.
-   This is a proof-of-concept implementation.  */
+   Attention: even though several *_l interfaces are part of POSIX:2008,
+   these are not.  */
 
 /* Structure for reentrant locale using functions.  This is an
    (almost) opaque type for the user level programs.  */
@@ -347,10 +348,16 @@ struct random_data
     int32_t *fptr;		/* Front pointer.  */
     int32_t *rptr;		/* Rear pointer.  */
     int32_t *state;		/* Array of state values.  */
+#if 0
+    int rand_type;		/* Type of random number generator.  */
+    int rand_deg;		/* Degree of random number generator.  */
+    int rand_sep;		/* Distance between front and rear.  */
+#else
     /* random_r.c, TYPE_x, DEG_x, SEP_x - small enough for int8_t */
     int8_t rand_type;		/* Type of random number generator.  */
     int8_t rand_deg;		/* Degree of random number generator.  */
     int8_t rand_sep;		/* Distance between front and rear.  */
+#endif
     int32_t *end_ptr;		/* Pointer behind state table.  */
   };
 
@@ -496,7 +503,7 @@ __BEGIN_NAMESPACE_STD
    the same pointer that was passed to it, aliasing needs to be allowed
    between objects pointed by the old and new pointers.  */
 extern void *realloc (void *__ptr, size_t __size)
-     __THROW __attribute_warn_unused_result__;
+     __THROW __wur;
 /* Free a block allocated by `malloc', `realloc' or `calloc'.  */
 extern void free (void *__ptr) __THROW;
 __END_NAMESPACE_STD
@@ -540,7 +547,7 @@ extern int on_exit (void (*__func) (int __status, void *__arg), void *__arg)
 
 __BEGIN_NAMESPACE_STD
 /* Call all functions registered with `atexit' and `on_exit',
-   in the reverse of the order in which they were registered
+   in the reverse of the order in which they were registered,
    perform stdio cleanup, and terminate program execution with STATUS.  */
 extern void exit (int __status) __THROW __attribute__ ((__noreturn__));
 libc_hidden_proto(exit)
@@ -619,7 +626,7 @@ extern char *mktemp (char *__template) __THROW __nonnull ((1)) __wur;
    Returns a file descriptor open on the file for reading and writing,
    or -1 if it cannot create a uniquely-named file.
 
-   This function is a possible cancellation points and therefore not
+   This function is a possible cancellation point and therefore not
    marked with __THROW.  */
 # ifndef __USE_FILE_OFFSET64
 extern int mkstemp (char *__template) __nonnull ((1)) __wur;
@@ -636,7 +643,7 @@ extern int mkstemp64 (char *__template) __nonnull ((1)) __wur;
 # endif
 #endif
 
-#ifdef __USE_BSD
+#if defined __USE_BSD || defined __USE_XOPEN2K8
 /* Create a unique temporary directory from TEMPLATE.
    The last six characters of TEMPLATE must be "XXXXXX";
    they are replaced with a string that makes the directory name unique.
@@ -655,21 +662,23 @@ extern int system (__const char *__command) __wur;
 __END_NAMESPACE_STD
 
 
-#if 0 /* def	__USE_GNU */
+#ifdef	__USE_GNU
 /* Return a malloc'd string containing the canonical absolute name of the
    existing named file.  */
 extern char *canonicalize_file_name (__const char *__name)
      __THROW __nonnull ((1)) __wur;
 #endif
 
+#if defined __USE_BSD || defined __USE_XOPEN_EXTENDED
 /* Return the canonical absolute name of file NAME.  If RESOLVED is
    null, the result is malloc'd; otherwise, if the canonical name is
    PATH_MAX chars or more, returns null with `errno' set to
    ENAMETOOLONG; if the name fits in fewer than PATH_MAX chars,
    returns the name in RESOLVED.  */
-/* we choose to handle __resolved==NULL as crash :) */
 extern char *realpath (__const char *__restrict __name,
 		       char *__restrict __resolved) __THROW __wur;
+libc_hidden_proto(realpath)
+#endif
 
 
 /* Shorthand for type of comparison functions.  */
@@ -680,6 +689,9 @@ typedef int (*__compar_fn_t) (__const void *, __const void *);
 # ifdef	__USE_GNU
 typedef __compar_fn_t comparison_fn_t;
 # endif
+#endif
+#ifdef __USE_GNU
+typedef int (*__compar_d_fn_t) (__const void *, __const void *, void *);
 #endif
 
 __BEGIN_NAMESPACE_STD
@@ -694,7 +706,12 @@ extern void *bsearch (__const void *__key, __const void *__base,
 extern void qsort (void *__base, size_t __nmemb, size_t __size,
 		   __compar_fn_t __compar) __nonnull ((1, 4));
 libc_hidden_proto(qsort)
-
+#ifdef __USE_GNU
+extern void qsort_r (void *__base, size_t __nmemb, size_t __size,
+		   __compar_d_fn_t __compar, void *__arg)
+  __nonnull ((1, 4));
+libc_hidden_proto(qsort_r)
+#endif
 
 /* Return the absolute value of X.  */
 extern int abs (int __x) __THROW __attribute__ ((__const__)) __wur;
@@ -811,7 +828,7 @@ __END_NAMESPACE_STD
 #endif /* __UCLIBC_HAS_WCHAR__ */
 
 
-#if 0 /*def __USE_SVID*/
+#ifdef __USE_SVID
 /* Determine whether the string value of RESPONSE matches the affirmation
    or negative response expression as specified by the LC_MESSAGES category
    in the program's current locale.  Returns 1 if affirmative, 0 if
@@ -853,6 +870,7 @@ libc_hidden_proto(posix_openpt)
 #ifdef __USE_XOPEN
 /* The next four functions all take a master pseudo-tty fd and
    perform an operation on the associated slave:  */
+
 #ifdef __UCLIBC_HAS_PTY__
 /* Chown the slave to the calling user.  */
 extern int grantpt (int __fd) __THROW;
@@ -895,8 +913,14 @@ extern int getloadavg (double __loadavg[], int __nelem)
 #include <stdint.h>
 extern uint32_t arc4random(void);
 extern void arc4random_stir(void);
-libc_hidden_proto(arc4random_stir)
 extern void arc4random_addrandom(unsigned char *, int);
+#endif
+
+#ifdef _LIBC
+extern int __drand48_iterate (unsigned short int xsubi[3], struct drand48_data *buffer) attribute_hidden;
+
+/* Global state for non-reentrant functions.  */
+extern struct drand48_data __libc_drand48_data attribute_hidden;
 #endif
 
 #endif /* don't just need malloc and calloc */

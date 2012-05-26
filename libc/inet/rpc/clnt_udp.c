@@ -260,14 +260,14 @@ is_network_up (int sock)
 }
 
 static enum clnt_stat
-clntudp_call (cl, proc, xargs, argsp, xresults, resultsp, utimeout)
-     CLIENT *cl;	/* client handle */
-     u_long proc;		/* procedure number */
-     xdrproc_t xargs;		/* xdr routine for args */
-     caddr_t argsp;		/* pointer to args */
-     xdrproc_t xresults;	/* xdr routine for results */
-     caddr_t resultsp;		/* pointer to results */
-     struct timeval utimeout;	/* seconds to wait before giving up */
+clntudp_call (
+     CLIENT *cl,	/* client handle */
+     u_long proc,		/* procedure number */
+     xdrproc_t xargs,		/* xdr routine for args */
+     caddr_t argsp,		/* pointer to args */
+     xdrproc_t xresults,	/* xdr routine for results */
+     caddr_t resultsp,		/* pointer to results */
+     struct timeval utimeout	/* seconds to wait before giving up */)
 {
   struct cu_data *cu = (struct cu_data *) cl->cl_private;
   XDR *xdrs;
@@ -554,6 +554,7 @@ clntudp_control (CLIENT *cl, int request, char *info)
       /* This will set the xid of the NEXT call */
       *(u_long *)cu->cu_outbuf =  htonl(*(u_long *)info - 1);
       /* decrement by 1 as clntudp_call() increments once */
+      break;
     case CLGET_VERS:
       /*
        * This RELIES on the information that, in the call body,

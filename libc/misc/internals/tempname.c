@@ -62,7 +62,10 @@ int attribute_hidden ___path_search (char *tmpl, size_t tmpl_len, const char *di
 	const char *pfx /*, int try_tmpdir*/)
 {
     /*const char *d; */
-    size_t dlen, plen;
+    /* dir and pfx lengths should always fit into an int,
+       so don't bother using size_t here.  Especially since
+       the printf func requires an int for precision (%*s).  */
+    int dlen, plen;
 
     if (!pfx || !pfx[0])
     {
@@ -107,7 +110,7 @@ int attribute_hidden ___path_search (char *tmpl, size_t tmpl_len, const char *di
 	dlen--;			/* remove trailing slashes */
 
     /* check we have room for "${dir}/${pfx}XXXXXX\0" */
-    if (tmpl_len < dlen + 1 + plen + 6 + 1)
+    if (tmpl_len < (size_t)dlen + 1 + plen + 6 + 1)
     {
 	__set_errno (EINVAL);
 	return -1;
@@ -168,14 +171,14 @@ static void brain_damaged_fillrand(unsigned char *buf, unsigned int len)
 
    KIND may be one of:
    __GT_NOCREATE:       simply verify that the name does not exist
-                        at the time of the call.
+                        at the time of the call. mode argument is ignored.
    __GT_FILE:           create the file using open(O_CREAT|O_EXCL)
-                        and return a read-write fd.  The file is mode 0600.
+                        and return a read-write fd with given mode.
    __GT_BIGFILE:        same as __GT_FILE but use open64().
-   __GT_DIR:            create a directory, which will be mode 0700.
+   __GT_DIR:            create a directory with given mode.
 
 */
-int attribute_hidden __gen_tempname (char *tmpl, int kind)
+int attribute_hidden __gen_tempname (char *tmpl, int kind, mode_t mode)
 {
     char *XXXXXX;
     unsigned int i;
@@ -193,7 +196,7 @@ int attribute_hidden __gen_tempname (char *tmpl, int kind)
     }
 
     for (i = 0; i < TMP_MAX; ++i) {
-	int j;
+	unsigned char j;
 	/* Get some random data.  */
 	if (fillrand(randomness, sizeof(randomness)) != sizeof(randomness)) {
 	    /* if random device nodes failed us, lets use the braindamaged ver */
@@ -217,15 +220,15 @@ int attribute_hidden __gen_tempname (char *tmpl, int kind)
 			fd = 0;
 		}
 	    case __GT_FILE:
-		fd = open (tmpl, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+		fd = open (tmpl, O_RDWR | O_CREAT | O_EXCL, mode);
 		break;
 #if defined __UCLIBC_HAS_LFS__
 	    case __GT_BIGFILE:
-		fd = open64 (tmpl, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+		fd = open64 (tmpl, O_RDWR | O_CREAT | O_EXCL, mode);
 		break;
 #endif
 	    case __GT_DIR:
-		fd = mkdir (tmpl, S_IRUSR | S_IWUSR | S_IXUSR);
+		fd = mkdir (tmpl, mode);
 		break;
 	    default:
 		fd = -1;

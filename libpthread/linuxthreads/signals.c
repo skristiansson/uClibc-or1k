@@ -19,7 +19,6 @@
 #include "pthread.h"
 #include "internals.h"
 #include "spinlock.h"
-#include <ucontext.h>
 
 /* mods for uClibc: __libc_sigaction is not in any standard headers */
 extern __typeof(sigaction) __libc_sigaction;
@@ -114,7 +113,7 @@ int __pthread_sigaction(int sig, const struct sigaction * act,
     newactp = NULL;
   if (__libc_sigaction(sig, newactp, oact) == -1)
     {
-      if (act)
+      if (act && (sig > 0 && sig < NSIG))
 	__sighandler[sig].old = (arch_sighandler_t) old;
       return -1;
     }

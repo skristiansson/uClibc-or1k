@@ -26,6 +26,7 @@
 /sys/debugreg.h
 /sys/elf.h
 /sys/epoll.h
+/sys/eventfd.h
 /sys/fpregdef.h
 /sys/inotify.h
 /sys/io.h
@@ -35,6 +36,7 @@
 /sys/ptrace.h
 /sys/reg.h
 /sys/regdef.h
+/sys/signalfd.h
 /sys/sysmips.h
 /sys/tas.h
 /sys/timerfd.h

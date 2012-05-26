@@ -41,7 +41,7 @@ tmpnam (char *s)
 			0))
     return NULL;
 
-  if (__builtin_expect (__gen_tempname (tmpbuf, __GT_NOCREATE), 0))
+  if (__builtin_expect (__gen_tempname (tmpbuf, __GT_NOCREATE, 0), 0))
     return NULL;
 
   if (s == NULL)
@@ -50,5 +50,4 @@ tmpnam (char *s)
   return s;
 }
 
-link_warning (tmpnam,
-	      "the use of `tmpnam' is dangerous, better use `mkstemp'")
+link_warning (tmpnam, "the use of `tmpnam' is dangerous, better use `mkstemp'")

@@ -21,6 +21,10 @@ endif
 U_TARGETS := $(TESTS)
 G_TARGETS := $(addsuffix _glibc,$(U_TARGETS))
 
+ifneq ($(GLIBC_TESTS_DISABLED),)
+G_TARGETS := $(filter-out $(GLIBC_TESTS_DISABLED),$(G_TARGETS))
+endif
+
 ifeq ($(GLIBC_ONLY),)
 TARGETS   += $(U_TARGETS)
 endif
@@ -29,12 +33,12 @@ TARGETS   += $(G_TARGETS)
 endif
 
 CLEAN_TARGETS := $(U_TARGETS) $(G_TARGETS)
-CLEAN_TARGETS += $(TESTS_DISABLED) $(addsuffix _glibc,$(TESTS_DISABLED))
+CLEAN_TARGETS += $(TESTS_DISABLED) $(addsuffix _glibc,$(TESTS_DISABLED)) $(GLIBC_TESTS_DISABLED)
 COMPILE_TARGETS :=  $(TARGETS)
 RUN_TARGETS := $(addsuffix .exe,$(TARGETS))
 # provide build rules even for disabled tests:
 U_TARGETS += $(TESTS_DISABLED)
-G_TARGETS += $(addsuffix _glibc,$(TESTS_DISABLED))
+G_TARGETS += $(addsuffix _glibc,$(TESTS_DISABLED)) $(GLIBC_TESTS_DISABLED)
 TARGETS += $(SHELL_TESTS)
 CFLAGS += $(CFLAGS_$(notdir $(CURDIR)))
 
@@ -70,15 +74,16 @@ define exec_test
 		test -z "$$expected_ret" && export expected_ret=0 ; \
 	if ! test $$ret -eq $$expected_ret ; then \
 		echo "ret == $$ret ; expected_ret == $$expected_ret" ; \
+		echo "The output of failed test is:"; \
+		cat "$(binary_name).out"; \
 		exit 1 ; \
 	fi
 	$(SCAT) "$(binary_name).out"
 endef
 
 test check all: run
-run: $(RUN_TARGETS) compile
-
-$(RUN_TARGETS): $(TARGETS)
+run: $(RUN_TARGETS)
+$(RUN_TARGETS):
 	$(exec_test)
 	$(diff_test)
 ifeq ($(UCLIBC_ONLY),)
@@ -94,12 +99,14 @@ $(MAKE_SRCS): Makefile $(TESTDIR)Makefile $(TESTDIR)Rules.mak $(TESTDIR)Test.mak
 
 $(U_TARGETS): $(U_TARGET_SRCS) $(MAKE_SRCS)
 	$(showlink)
-	$(Q)$(CC) $(CFLAGS) $(EXTRA_CFLAGS) $(CFLAGS_$(notdir $(CURDIR))) $(CFLAGS_$@) -c $@.c -o $@.o
+	$(Q)$(CC) $(filter-out $(CFLAGS-OMIT-$@),$(CFLAGS)) $(EXTRA_CFLAGS) $(CFLAGS_$(notdir $(CURDIR))) $(CFLAGS_$@) -c $@.c -o $@.o
 	$(Q)$(CC) $(LDFLAGS) $@.o -o $@ $(EXTRA_LDFLAGS) $(LDFLAGS_$@)
 
 $(G_TARGETS): $(U_TARGET_SRCS) $(MAKE_SRCS)
 	$(showlink)
-	$(Q)$(HOSTCC) $(HOST_CFLAGS) $(CFLAGS_$(notdir $(CURDIR))) $(CFLAGS_$(patsubst %_glibc,%,$@)) -c $(patsubst %_glibc,%,$@).c -o $@.o
+	$(Q)$(HOSTCC) $(filter-out $(HOST_CFLAGS-OMIT-$(patsubst %_glibc,%,$@)),$(HOST_CFLAGS)) \
+	$(CFLAGS_$(notdir $(CURDIR))) $(CFLAGS_$(patsubst %_glibc,%,$@)) \
+	-c $(patsubst %_glibc,%,$@).c -o $@.o
 	$(Q)$(HOSTCC) $(HOST_LDFLAGS) $@.o -o $@ $(EXTRA_LDFLAGS) $(LDFLAGS_$(patsubst %_glibc,%,$@))
 
 
@@ -112,9 +119,11 @@ shell_%:
 %.so: %.c
 	$(showlink)
 	$(Q)$(CC) \
-		$(CFLAGS) $(EXTRA_CFLAGS) $(CFLAGS_$(patsubst %_glibc,%,$@)) \
+		$(filter-out $(CFLAGS-OMIT-$<),$(CFLAGS)) $(EXTRA_CFLAGS) \
+		$(CFLAGS_$(patsubst %_glibc,%,$@)) \
 		-fPIC -shared $< -o $@ -Wl,-soname,$@ \
-		$(LDFLAGS) $(EXTRA_LIBS) $(LDFLAGS_$(patsubst %_glibc,%,$@))
+		$(filter-out $(LDFLAGS-OMIT-$<),$(LDFLAGS)) $(EXTRA_LIBS) \
+		$(LDFLAGS_$(patsubst %_glibc,%,$@))
 
 clean:
 	$(showclean)

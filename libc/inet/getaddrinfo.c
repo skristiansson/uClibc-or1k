@@ -56,6 +56,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assert.h>
 #include <errno.h>
 #include <netdb.h>
+#ifdef __UCLIBC_HAS_TLS__
+#include <tls.h>
+#endif
 #include <resolv.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -307,7 +310,7 @@ gaih_local(const char *name, const struct gaih_service *service,
 		char *buf = ((struct sockaddr_un *)ai->ai_addr)->sun_path;
 
 		if (__path_search(buf, L_tmpnam, NULL, NULL, 0) != 0
-		 || __gen_tempname(buf, __GT_NOCREATE) != 0
+		 || __gen_tempname(buf, __GT_NOCREATE, 0) != 0
 		) {
 			return -EAI_SYSTEM;
 		}
@@ -392,32 +395,40 @@ gaih_inet(const char *name, const struct gaih_service *service,
 {
 	struct gaih_servtuple nullserv;
 
-	const struct gaih_typeproto *tp = gaih_inet_typeproto;
-	struct gaih_servtuple *st = &nullserv;
-	struct gaih_addrtuple *at = NULL;
+	const struct gaih_typeproto *tp;
+	struct gaih_servtuple *st;
+	struct gaih_addrtuple *at;
 	int rc;
 	int v4mapped = (req->ai_family == PF_UNSPEC || req->ai_family == PF_INET6)
 			&& (req->ai_flags & AI_V4MAPPED);
-	unsigned seen = __check_pf();
+	unsigned seen = 0;
+	if (req->ai_flags & AI_ADDRCONFIG) {
+		/* "seen" is only used when AI_ADDRCONFIG is specified.
+		   Avoid unnecessary call to __check_pf() otherwise
+		   since it can be costly especially when RSBAC-Net is enabled.  */
+		seen = __check_pf();
+	}
 
 	memset(&nullserv, 0, sizeof(nullserv));
 
+	tp = gaih_inet_typeproto;
 	if (req->ai_protocol || req->ai_socktype) {
 		++tp;
-		while (tp->name[0]
-			&& ((req->ai_socktype != 0 && req->ai_socktype != tp->socktype)
-			    || (req->ai_protocol != 0 && !(tp->protoflag & GAI_PROTO_PROTOANY) && req->ai_protocol != tp->protocol)
-			)
-		) {
+		while (tp->name[0]) {
+			if ((req->ai_socktype == 0 || req->ai_socktype == tp->socktype)
+			 && (req->ai_protocol == 0 || req->ai_protocol == tp->protocol || (tp->protoflag & GAI_PROTO_PROTOANY))
+			) {
+				goto found;
+			}
 			++tp;
 		}
-		if (! tp->name[0]) {
-			if (req->ai_socktype)
-				return (GAIH_OKIFUNSPEC | -EAI_SOCKTYPE);
-			return (GAIH_OKIFUNSPEC | -EAI_SERVICE);
-		}
+		if (req->ai_socktype)
+			return (GAIH_OKIFUNSPEC | -EAI_SOCKTYPE);
+		return (GAIH_OKIFUNSPEC | -EAI_SERVICE);
+ found: ;
 	}
 
+	st = &nullserv;
 	if (service != NULL) {
 		if ((tp->protoflag & GAI_PROTO_NOSERVICE) != 0)
 			return (GAIH_OKIFUNSPEC | -EAI_SERVICE);
@@ -492,6 +503,7 @@ gaih_inet(const char *name, const struct gaih_service *service,
 		}
 	}
 
+	at = NULL;
 	if (name != NULL) {
 		at = alloca(sizeof(struct gaih_addrtuple));
 		at->family = AF_UNSPEC;
@@ -499,10 +511,9 @@ gaih_inet(const char *name, const struct gaih_service *service,
 		at->next = NULL;
 
 		if (inet_pton(AF_INET, name, at->addr) > 0) {
-			if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET || v4mapped)
-				at->family = AF_INET;
-			else
+			if (req->ai_family != AF_UNSPEC && req->ai_family != AF_INET && !v4mapped)
 				return -EAI_FAMILY;
+			at->family = AF_INET;
 		}
 
 #if defined __UCLIBC_HAS_IPV6__
@@ -515,11 +526,9 @@ gaih_inet(const char *name, const struct gaih_service *service,
 				*scope_delim = '\0';
 
 			if (inet_pton(AF_INET6, namebuf, at->addr) > 0) {
-				if (req->ai_family == AF_UNSPEC || req->ai_family == AF_INET6)
-					at->family = AF_INET6;
-				else
+				if (req->ai_family != AF_UNSPEC && req->ai_family != AF_INET6)
 					return -EAI_FAMILY;
-
+				at->family = AF_INET6;
 				if (scope_delim != NULL) {
 					int try_numericscope = 0;
 					uint32_t *a32 = (uint32_t*)at->addr;
@@ -542,7 +551,7 @@ gaih_inet(const char *name, const struct gaih_service *service,
 		}
 #endif
 
-		if (at->family == AF_UNSPEC && (req->ai_flags & AI_NUMERICHOST) == 0) {
+		if (at->family == AF_UNSPEC && !(req->ai_flags & AI_NUMERICHOST)) {
 			struct hostent *h;
 			struct gaih_addrtuple **pat = &at;
 			int no_data = 0;
@@ -625,33 +634,42 @@ gaih_inet(const char *name, const struct gaih_service *service,
 		char buffer[sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")];
 
 		while (at2 != NULL) {
-			if (req->ai_flags & AI_CANONNAME) {
+			c = inet_ntop(at2->family, at2->addr, buffer, sizeof(buffer));
+			if (c) {
+				namelen = strlen(c) + 1;
+			} else if (req->ai_flags & AI_CANONNAME) {
 				struct hostent *h = NULL;
 				int herrno;
 				struct hostent th;
 				size_t tmpbuflen = 512;
 				char *tmpbuf;
 
+				/* Hint says numeric, but address is not */
+				if (req->ai_flags & AI_NUMERICHOST)
+					return -EAI_NONAME;
+
 				do {
 					tmpbuflen *= 2;
 					tmpbuf = alloca(tmpbuflen);
 					rc = gethostbyaddr_r(at2->addr,
+#ifdef __UCLIBC_HAS_IPV6__
 						((at2->family == AF_INET6)
 						 ? sizeof(struct in6_addr)
 						 : sizeof(struct in_addr)),
+#else
+						sizeof(struct in_addr),
+#endif
 						at2->family,
 						&th, tmpbuf, tmpbuflen,
 						&h, &herrno);
-				} while (rc == errno && herrno == NETDB_INTERNAL);
+				} while (rc == ERANGE && herrno == NETDB_INTERNAL);
 
 				if (rc != 0 && herrno == NETDB_INTERNAL) {
 					__set_h_errno(herrno);
 					return -EAI_SYSTEM;
 				}
 
-				if (h == NULL)
-					c = inet_ntop(at2->family, at2->addr, buffer, sizeof(buffer));
-				else
+				if (h != NULL)
 					c = h->h_name;
 
 				if (c == NULL)
@@ -776,9 +794,9 @@ int
 getaddrinfo(const char *name, const char *service,
 	     const struct addrinfo *hints, struct addrinfo **pai)
 {
-	int i = 0, j, last_i = 0;
-	struct addrinfo *p = NULL, **end;
-	const struct gaih *g = gaih, *pg = NULL;
+	int i, j, last_i;
+	struct addrinfo *p, **end;
+	const struct gaih *g, *pg;
 	struct gaih_service gaih_service, *pservice;
 	struct addrinfo default_hints;
 
@@ -793,7 +811,7 @@ getaddrinfo(const char *name, const char *service,
 
 	if (hints == NULL) {
 		memset(&default_hints, 0, sizeof(default_hints));
-		if (AF_UNSPEC)
+		if (AF_UNSPEC != 0)
 			default_hints.ai_family = AF_UNSPEC;
 		hints = &default_hints;
 	}
@@ -813,22 +831,19 @@ getaddrinfo(const char *name, const char *service,
 			if (hints->ai_flags & AI_NUMERICSERV)
 				return EAI_NONAME;
 			gaih_service.num = -1;
-		} else {
-			/*
-			 * Can't specify a numerical socket unless a protocol
-			 * family was given.
-			 */
-			if (hints->ai_socktype == 0 && hints->ai_protocol == 0)
-				return EAI_SERVICE;
 		}
 		pservice = &gaih_service;
 	} else
 		pservice = NULL;
 
+	g = gaih;
+	pg = NULL;
+	p = NULL;
 	end = NULL;
 	if (pai)
 		end = &p;
-
+	i = 0;
+	last_i = 0;
 	j = 0;
 	while (g->gaih) {
 		if (hints->ai_family == g->family || hints->ai_family == AF_UNSPEC) {
@@ -844,7 +859,7 @@ getaddrinfo(const char *name, const char *service,
 					last_i = i;
 					if (hints->ai_family == AF_UNSPEC && (i & GAIH_OKIFUNSPEC))
 						continue;
-					if (p)
+					/*if (p) - freeaddrinfo works ok on NULL too */
 						freeaddrinfo(p);
 					return -(i & GAIH_EAI);
 				}

@@ -753,7 +753,7 @@ static smallint debug;
 /* Print the fastmap in human-readable form.  */
 
 #  ifndef DEFINED_ONCE
-void
+static void
 print_fastmap (char *fastmap)
 {
   unsigned was_a_range = 0;
@@ -785,7 +785,7 @@ print_fastmap (char *fastmap)
 /* Print a compiled pattern string in human-readable form, starting at
    the START pointer into it and ending just before the pointer END.  */
 
-void
+static void
 PREFIX(print_partial_compiled_pattern) (UCHAR_T *start, UCHAR_T *end)
 {
   int mcnt, mcnt2;
@@ -1118,7 +1118,7 @@ PREFIX(print_partial_compiled_pattern) (UCHAR_T *start, UCHAR_T *end)
 }
 
 
-void
+static void
 PREFIX(print_compiled_pattern) (struct re_pattern_buffer *bufp)
 {
   UCHAR_T *buffer = (UCHAR_T*) bufp->buffer;
@@ -1150,7 +1150,7 @@ PREFIX(print_compiled_pattern) (struct re_pattern_buffer *bufp)
 }
 
 
-void
+static void
 PREFIX(print_double_string) (
     const CHAR_T *where,
     const CHAR_T *string1,
@@ -1187,7 +1187,7 @@ PREFIX(print_double_string) (
     }
 }
 
-#  ifndef DEFINED_ONCE
+#  if 0 /* ndef DEFINED_ONCE */
 void
 printchar (int c)
 {
@@ -7212,6 +7212,10 @@ byte_re_match_2_internal (
             POP_FAILURE_POINT (sdummy, pdummy,
                                dummy_low_reg, dummy_high_reg,
                                reg_dummy, reg_dummy, reg_info_dummy);
+
+            /* Silence 'set but not used' warnings.  */
+            (void) pdummy;
+            (void) sdummy;
           }
 	  /* Note fall through.  */
 

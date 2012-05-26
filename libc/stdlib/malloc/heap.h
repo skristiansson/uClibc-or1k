@@ -16,11 +16,10 @@
 
 /* On multi-threaded systems, the heap includes a lock.  */
 #ifdef __UCLIBC_HAS_THREADS__
-# include <pthread.h>
-# include <bits/uClibc_pthread.h>
+# include <bits/uClibc_mutex.h>
 # define HEAP_USE_LOCKING
-# define __heap_lock(heap_lock) __pthread_mutex_lock (heap_lock)
-# define __heap_unlock(heap_lock) __pthread_mutex_unlock (heap_lock)
+# define __heap_lock(heap_lock) __UCLIBC_MUTEX_LOCK_CANCEL_UNSAFE(*(heap_lock))
+# define __heap_unlock(heap_lock) __UCLIBC_MUTEX_UNLOCK_CANCEL_UNSAFE(*(heap_lock))
 #else
 # define __heap_lock(heap_lock)
 # define __heap_unlock(heap_lock)
@@ -30,8 +29,10 @@
 /* The heap allocates in multiples of, and aligned to, HEAP_GRANULARITY.
    HEAP_GRANULARITY must be a power of 2.  Malloc depends on this being the
    same as MALLOC_ALIGNMENT.  */
-#define HEAP_GRANULARITY_TYPE	double __attribute_aligned__ (sizeof (size_t))
-#define HEAP_GRANULARITY	(__alignof__ (HEAP_GRANULARITY_TYPE))
+#define HEAP_GRANULARITY_TYPE	double __attribute_aligned__ (HEAP_GRANULARITY)
+#define HEAP_GRANULARITY \
+  (__alignof__ (double) > sizeof (size_t) ? __alignof__ (double) : sizeof (size_t))
+
 
 
 /* The HEAP_INIT macro can be used as a static initializer for a heap

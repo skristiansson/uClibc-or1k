@@ -65,9 +65,16 @@ libc_hidden_proto(__glibc_strerror_r)
 /* internal access to program name */
 extern const char *__uclibc_progname attribute_hidden;
 
+#  ifdef __UCLIBC_HAS_FORTIFY__
+extern void __chk_fail(void) attribute_noreturn;
+libc_hidden_proto(__chk_fail)
+#  endif
+
 # endif /* IS_IN_libc */
 
 #endif /* __ASSEMBLER__ */
+
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 /* Some people like to build up uClibc with *-elf toolchains, so
  * a little grease here until we drop '#ifdef __linux__' checks

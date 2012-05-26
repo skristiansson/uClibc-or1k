@@ -69,7 +69,8 @@ FILE attribute_hidden *_stdio_fopen(intptr_t fname_or_mode,
 #warning CONSIDER: Implement glibc mmap option for readonly files?
 #warning CONSIDER: Implement a text mode using custom read/write funcs?
 #endif
-#if defined(__UCLIBC_HAS_FOPEN_EXCLUSIVE_MODE__) || defined(__UCLIBC_HAS_FOPEN_LARGEFILE_MODE__)
+#if defined(__UCLIBC_HAS_FOPEN_EXCLUSIVE_MODE__) || defined(__UCLIBC_HAS_FOPEN_LARGEFILE_MODE__) || \
+    defined(__UCLIBC_HAS_FOPEN_CLOSEEXEC_MODE__)
 
 	while (*++mode) {
 # ifdef __UCLIBC_HAS_FOPEN_EXCLUSIVE_MODE__
@@ -81,6 +82,12 @@ FILE attribute_hidden *_stdio_fopen(intptr_t fname_or_mode,
 # ifdef __UCLIBC_HAS_FOPEN_LARGEFILE_MODE__
 		if (*mode == 'F') {		/* Open as large file (uClibc extension). */
 			open_mode |= O_LARGEFILE;
+			continue;
+		}
+# endif
+# ifdef __UCLIBC_HAS_FOPEN_CLOSEEXEC_MODE__
+		if (*mode == 'e') {		/* Close on exec (a glibc extension). */
+			open_mode |= O_CLOEXEC;
 			continue;
 		}
 # endif
@@ -99,7 +106,7 @@ FILE attribute_hidden *_stdio_fopen(intptr_t fname_or_mode,
 #ifdef __UCLIBC_HAS_THREADS__
 		/* We only initialize the mutex in the non-freopen case. */
 		/* stream->__user_locking = _stdio_user_locking; */
-		__stdio_init_mutex(&stream->__lock);
+		STDIO_INIT_MUTEX(stream->__lock);
 #endif
 	}
 
@@ -197,7 +204,7 @@ FILE attribute_hidden *_stdio_fopen(intptr_t fname_or_mode,
 #ifdef __UCLIBC_HAS_THREADS__
 	/* Even in the freopen case, we reset the user locking flag. */
 	stream->__user_locking = _stdio_user_locking;
-	/* __stdio_init_mutex(&stream->__lock); */
+	/* STDIO_INIT_MUTEX(stream->__lock); */
 #endif
 
 #ifdef __STDIO_HAS_OPENLIST

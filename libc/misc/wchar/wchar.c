@@ -286,6 +286,8 @@ size_t mbrtowc(wchar_t *__restrict pwc, const char *__restrict s,
 		s = empty_string;
 		n = 1;
 	} else if (*s == '\0') {
+		if (pwc)
+			*pwc = '\0';
 	/* According to the ISO C 89 standard this is the expected behaviour.  */
 		return 0;
 	} else if (!n) {
@@ -1306,9 +1308,9 @@ iconv_t weak_function iconv_open(const char *tocode, const char *fromcode)
 		&& ((fromcodeset = find_codeset(fromcode)) != 0)) {
 		if ((px = malloc(sizeof(_UC_iconv_t))) != NULL) {
 			px->tocodeset = tocodeset;
-			px->tobom0 = px->tobom = (tocodeset & 0x10) >> 4;
+			px->tobom0 = px->tobom = (tocodeset >= 0xe0) ? (tocodeset & 0x10) >> 4 : 0;
 			px->fromcodeset0 = px->fromcodeset = fromcodeset;
-			px->frombom0 = px->frombom = (fromcodeset & 0x10) >> 4;
+			px->frombom0 = px->frombom = (fromcodeset >= 0xe0) ? (fromcodeset & 0x10) >> 4 : 0;
 			px->skip_invalid_input = px->tostate.__mask
 				= px->fromstate.__mask = 0;
 			return (iconv_t) px;

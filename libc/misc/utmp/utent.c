@@ -19,6 +19,7 @@
 #include <errno.h>
 #include <string.h>
 #include <utmp.h>
+#include <not-cancel.h>
 
 #include <bits/uClibc_mutex.h>
 __UCLIBC_MUTEX_STATIC(utmplock, PTHREAD_MUTEX_INITIALIZER);
@@ -46,16 +47,16 @@ static const char *static_ut_name = default_file_name;
 static_if_threaded void __setutent(void)
 {
     if (static_fd < 0) {
-	static_fd = open(static_ut_name, O_RDWR | O_CLOEXEC);
+	static_fd = open_not_cancel_2(static_ut_name, O_RDWR | O_CLOEXEC);
 	if (static_fd < 0) {
-	    static_fd = open(static_ut_name, O_RDONLY | O_CLOEXEC);
+	    static_fd = open_not_cancel_2(static_ut_name, O_RDONLY | O_CLOEXEC);
 	    if (static_fd < 0) {
 		return; /* static_fd remains < 0 */
 	    }
 	}
 #ifndef __ASSUME_O_CLOEXEC
 	/* Make sure the file will be closed on exec()  */
-	fcntl(static_fd, F_SETFD, FD_CLOEXEC);
+	fcntl_not_cancel(static_fd, F_SETFD, FD_CLOEXEC);
 #endif
 	return;
     }
@@ -81,7 +82,7 @@ static_if_threaded struct utmp *__getutent(void)
 	}
     }
 
-    if (read(static_fd, &static_utmp, sizeof(static_utmp)) == sizeof(static_utmp)) {
+    if (read_not_cancel(static_fd, &static_utmp, sizeof(static_utmp)) == sizeof(static_utmp)) {
 	return &static_utmp;
     }
 
@@ -98,15 +99,17 @@ struct utmp *getutent(void)
     return ret;
 }
 #endif
+libc_hidden_def(getutent)
 
 void endutent(void)
 {
     __UCLIBC_MUTEX_LOCK(utmplock);
     if (static_fd >= 0)
-	close(static_fd);
+	close_not_cancel_no_status(static_fd);
     static_fd = -1;
     __UCLIBC_MUTEX_UNLOCK(utmplock);
 }
+libc_hidden_def(endutent)
 
 /* This function must be called with the LOCK held */
 static_if_threaded struct utmp *__getutid(const struct utmp *utmp_entry)
@@ -143,6 +146,7 @@ struct utmp *getutid(const struct utmp *utmp_entry)
     return ret;
 }
 #endif
+libc_hidden_def(getutid)
 
 struct utmp *getutline(const struct utmp *utmp_entry)
 {
@@ -159,6 +163,7 @@ struct utmp *getutline(const struct utmp *utmp_entry)
     __UCLIBC_MUTEX_UNLOCK(utmplock);
     return lutmp;
 }
+libc_hidden_def(getutline)
 
 struct utmp *pututline(const struct utmp *utmp_entry)
 {
@@ -177,6 +182,7 @@ struct utmp *pututline(const struct utmp *utmp_entry)
     __UCLIBC_MUTEX_UNLOCK(utmplock);
     return (struct utmp *)utmp_entry;
 }
+libc_hidden_def(pututline)
 
 int utmpname(const char *new_ut_name)
 {
@@ -193,9 +199,10 @@ int utmpname(const char *new_ut_name)
     }
 
     if (static_fd >= 0) {
-	close(static_fd);
+	close_not_cancel_no_status(static_fd);
 	static_fd = -1;
     }
     __UCLIBC_MUTEX_UNLOCK(utmplock);
     return 0; /* or maybe return -(static_ut_name != new_ut_name)? */
 }
+libc_hidden_def(utmpname)
