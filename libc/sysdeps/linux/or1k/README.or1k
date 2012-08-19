@@ -6,9 +6,9 @@ information about it can be found at:
 Changes:
 14. 02. 2004	Matjaz Breskvar (phoenix@opencores.org)
 	improvments all over, upgrade to uClibc-0.9.26.
-	busybox compiles and runs on linux or32 port.
+	busybox compiles and runs on linux or1k port.
 
 09. 12. 2003	Matjaz Breskvar (phoenix@opencores.org)
-	initial port of uClibc-0.9.23 to OpenRISC/or32 architecture. 
+	initial port of uClibc-0.9.23 to OpenRISC/or1k architecture. 
 	sash-3.6 compiles cleanly and runs on linux 2.4.20	 
 	

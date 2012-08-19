@@ -1,4 +1,4 @@
-/* BSD `setjmp' entry point to `sigsetjmp (..., 1)'. or32 version. 
+/* BSD `setjmp' entry point to `sigsetjmp (..., 1)'. or1k version. 
 
    Based on PowerPC version:
    Copyright (C) 1994, 1997, 1999, 2000 Free Software Foundation, Inc.

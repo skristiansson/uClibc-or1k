@@ -16,7 +16,7 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
    02111-1307 USA.  */
 
-/* Define the machine-dependent type `jmp_buf'.  or32 version.  */
+/* Define the machine-dependent type `jmp_buf'.  or1k version.  */
 
 #ifndef _BITS_SETJMP_H
 #define _BITS_SETJMP_H  1

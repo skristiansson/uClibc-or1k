@@ -16,7 +16,7 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
    02111-1307 USA.  */
 
-/* or32 can be little or big endian.  Hopefully gcc will know...  */
+/* or1k can be little or big endian.  Hopefully gcc will know...  */
 
 #ifndef _ENDIAN_H
 # error "Never use <bits/endian.h> directly; include <endian.h> instead."

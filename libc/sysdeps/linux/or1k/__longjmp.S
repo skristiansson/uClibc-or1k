@@ -1,4 +1,4 @@
-/* longjmp for or32
+/* longjmp for or1k
 
    Based on:
    longjmp for PowerPC.

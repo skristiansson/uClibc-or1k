@@ -537,7 +537,7 @@ ifeq ($(TARGET_ARCH),c6x)
 	CPU_LDFLAGS-y += $(CPU_CFLAGS)
 endif
 
-ifeq ($(TARGET_ARCH),or32)
+ifeq ($(TARGET_ARCH),or1k)
 endif
 
 # Keep the check_gcc from being needlessly executed

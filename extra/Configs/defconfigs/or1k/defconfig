@@ -20,7 +20,7 @@
 # TARGET_mips is not set
 # TARGET_nios is not set
 # TARGET_nios2 is not set
-TARGET_or32=y
+TARGET_or1k=y
 # TARGET_powerpc is not set
 # TARGET_sh is not set
 # TARGET_sh64 is not set
@@ -33,8 +33,8 @@ TARGET_or32=y
 #
 # Target Architecture Features and Options
 #
-TARGET_ARCH="or32"
-CONFIG_OR32=y
+TARGET_ARCH="or1k"
+CONFIG_OR1K=y
 TARGET_SUBARCH=""
 
 #
@@ -205,7 +205,7 @@ UCLIBC_BUILD_NOEXECSTACK=y
 #
 # uClibc development/debugging options
 #
-CROSS_COMPILER_PREFIX="or32-linux-"
+CROSS_COMPILER_PREFIX="or1k-linux-"
 UCLIBC_EXTRA_CFLAGS=""
 # DODEBUG is not set
 # DODEBUG_PT is not set

@@ -18,7 +18,7 @@
 # TARGET_mips is not set
 # TARGET_nios is not set
 # TARGET_nios2 is not set
-TARGET_or32=y
+TARGET_or1k=y
 # TARGET_powerpc is not set
 # TARGET_sh is not set
 # TARGET_sh64 is not set
@@ -30,10 +30,10 @@ TARGET_or32=y
 #
 # Target Architecture Features and Options
 #
-TARGET_ARCH="or32"
-CROSS="or32-elf-"
+TARGET_ARCH="or1k"
+CROSS="or1k-elf-"
 HAVE_ELF=y
-CONFIG_OR32=y
+CONFIG_OR1K=y
 TARGET_SUBARCH=""
 
 #
@@ -153,7 +153,7 @@ UCLIBC_HAS_GLOB=y
 # Library Installation Options
 #
 RUNTIME_PREFIX="../uclibc_out"
-DEVEL_PREFIX="/opt/or32-elf"
+DEVEL_PREFIX="/opt/or1k-elf"
 
 #
 # Security options
@@ -166,7 +166,7 @@ UCLIBC_BUILD_NOEXECSTACK=y
 #
 # uClibc development/debugging options
 #
-CROSS_COMPILER_PREFIX="or32-elf-"
+CROSS_COMPILER_PREFIX="or1k-elf-"
 UCLIBC_EXTRA_CFLAGS="-fno-omit-frame-pointer"
 # DODEBUG is not set
 # DOSTRIP is not set
