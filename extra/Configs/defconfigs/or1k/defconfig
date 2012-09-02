@@ -60,8 +60,8 @@ HAVE_DOT_CONFIG=y
 #
 # HAVE_NO_PIC is not set
 # DOPIC is not set
-ARCH_HAS_NO_SHARED=y
-ARCH_HAS_NO_LDSO=y
+# ARCH_HAS_NO_SHARED is not set
+# ARCH_HAS_NO_LDSO is not set
 UCLIBC_CTOR_DTOR=y
 # HAS_NO_THREADS is not set
 LINUXTHREADS_OLD=y
