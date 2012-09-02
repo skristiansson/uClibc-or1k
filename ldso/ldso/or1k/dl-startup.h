@@ -23,7 +23,6 @@ __asm__ ("\
 	.hidden _start\n\
 _start:\n\
 	l.ori	r3, r9, 0\n\
-	l.nop	2\n\
 	l.ori	r3, r1, 0\n\
 	l.movhi	r11, 0\n\
 1:\n\
@@ -34,7 +33,6 @@ _start:\n\
 	l.bf	1b\n\
 	 l.nop\n\
 	l.ori	r3, r11, 0\n\
-	l.nop 0x2\n\
 	l.ori	r3, r1, 0\n\
 	l.addi	r11, r11, -1\n\
 	/* store argument counter to stack */\n\
