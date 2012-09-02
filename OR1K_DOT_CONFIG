@@ -31,7 +31,7 @@ TARGET_or1k=y
 # Target Architecture Features and Options
 #
 TARGET_ARCH="or1k"
-CROSS="or1k-elf-"
+CROSS="or1k-linux-"
 HAVE_ELF=y
 CONFIG_OR1K=y
 TARGET_SUBARCH=""
@@ -153,7 +153,7 @@ UCLIBC_HAS_GLOB=y
 # Library Installation Options
 #
 RUNTIME_PREFIX="../uclibc_out"
-DEVEL_PREFIX="/opt/or1k-elf"
+DEVEL_PREFIX="/opt/or1k-linux"
 
 #
 # Security options
@@ -166,7 +166,7 @@ UCLIBC_BUILD_NOEXECSTACK=y
 #
 # uClibc development/debugging options
 #
-CROSS_COMPILER_PREFIX="or1k-elf-"
+CROSS_COMPILER_PREFIX="or1k-linux-"
 UCLIBC_EXTRA_CFLAGS="-fno-omit-frame-pointer"
 # DODEBUG is not set
 # DOSTRIP is not set
