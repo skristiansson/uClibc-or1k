@@ -97,7 +97,10 @@ _start:
 	l.ori	r6,r6,lo(__init)
 	l.movhi	r7,hi(__fini)
 	l.ori	r7,r7,lo(__fini)
-	
+
+	/* rtld_fini = NULL */
+	l.movhi	r8, 0
+
 	/* Adjust stack to account for a total of 7 args (i.e. the last one is
 	   on the stack. */
 	l.addi  r1,r1,-4
