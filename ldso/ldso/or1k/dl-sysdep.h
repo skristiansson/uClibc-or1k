@@ -40,18 +40,32 @@ do {									\
   (((type) == R_OR1K_JMP_SLOT) * ELF_RTYPE_CLASS_PLT \
    | ((type) == R_OR1K_COPY) * ELF_RTYPE_CLASS_COPY)
 
+static inline Elf32_Addr *
+or1k_get_got (void)
+{
+	Elf32_Addr *got;
+	Elf32_Addr linkreg;
+	__asm__("l.ori   %0, r9, 0\n"
+		"l.jal	.LPC1\n"
+#ifndef __OR1K_NODELAY__
+		"l.nop\n"
+#endif
+	".LPC1:\n"
+		"l.movhi	%1, gotpchi(_GLOBAL_OFFSET_TABLE_+(.-.LPC1))\n"
+		"l.ori	%1, %1, gotpclo(_GLOBAL_OFFSET_TABLE_+(.-.LPC1))\n"
+		"l.add	%1, %1, r9\n"
+		"l.ori	r9, %0, 0\n"
+		: "=r" (linkreg), "=r" (got));
+	return got;
+}
+
 /* Return the link-time address of _DYNAMIC.  Conveniently, this is the
-   first element of the GOT.  This must be inlined in a function which
-   uses global data.  */
+   first element of the GOT. */
 static inline Elf32_Addr
 elf_machine_dynamic (void)
 {
-  Elf32_Addr got_entry_0;
-  __asm__ __volatile__(
-    "l.lwz %0, 0(r16)"
-    :"=r"(got_entry_0)
-    );
-  return got_entry_0;
+  Elf32_Addr *got = or1k_get_got();
+  return *got;
 }
 
 
@@ -63,13 +77,15 @@ elf_machine_load_address (void)
      by a GOTOFF reference, and the link-time address found in the special
      unrelocated first GOT entry.  */
   Elf32_Addr dyn;
+  Elf32_Addr *got = or1k_get_got();
+
   __asm__ __volatile__ (
     "l.movhi %0, gotoffhi(_DYNAMIC);"
     "l.ori %0, %0, gotofflo(_DYNAMIC);"
-    "l.add %0, %0, r16;"
-    : "=r"(dyn)
+    "l.add %0, %0, %1;"
+    : "=r"(dyn), "=r"(got)
     );
-  return dyn - elf_machine_dynamic ();
+  return dyn - *got;
 }
 
 
