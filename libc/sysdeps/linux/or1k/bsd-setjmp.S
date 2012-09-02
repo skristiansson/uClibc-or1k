@@ -25,15 +25,15 @@
 
 #include "spr_defs.h"
 
-.globl      _setjmp;
-.type      _setjmp, @function;
+.globl      __setjmp;
+.type      __setjmp, @function;
 .align  2;
 
-_setjmp:
+__setjmp:
 	l.addi	r4,r0,1			/* Set second argument to 1.  */
 	l.j	__sigsetjmp
 	l.nop
-.size     _setjmp,.-_setjmp
+.size     setjmp,.-setjmp
 
 .globl     setjmp;
-.set    setjmp,_setjmp
+.set    setjmp,__setjmp
