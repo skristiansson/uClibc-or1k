@@ -356,7 +356,11 @@ Domain name in a message can be represented as either:
  * has same requirements).  The offset is the number of bytes we need to adjust
  * in order to attain desired alignment.
  */
+#ifdef __clang__
+#define ALIGN_ATTR __alignof__(double)
+#else
 #define ALIGN_ATTR __alignof__(double __attribute_aligned__ (sizeof(size_t)))
+#endif
 #define ALIGN_BUFFER_OFFSET(buf) ((ALIGN_ATTR - ((size_t)buf % ALIGN_ATTR)) % ALIGN_ATTR)
 
 

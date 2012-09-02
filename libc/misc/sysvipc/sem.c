@@ -51,7 +51,11 @@ int semctl(int semid, int semnum, int cmd, ...)
 
     /* Get the argument.  */
     va_start (ap, cmd);
+#ifdef __clang__
+    arg = (union semun)va_arg (ap, int);
+#else
     arg = va_arg (ap, union semun);
+#endif
     va_end (ap);
 #ifdef __NR_semctl
     return __semctl(semid, semnum, cmd | __IPC_64, arg.__pad);

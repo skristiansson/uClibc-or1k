@@ -45,7 +45,11 @@ testandset (int *spinlock)
 
 /* Get some notion of the current stack.  Need not be exactly the top
    of the stack, just something somewhere in the current frame.  */
-#define CURRENT_STACK_FRAME  stack_pointer
-register char * stack_pointer __asm__ ("r1");
-
+#define CURRENT_STACK_FRAME  stack_pointer()
+static inline char *stack_pointer(void)
+{
+	unsigned long ret;
+	__asm__ __volatile__ ("l.ori %0, r1, 0" : "=r" (ret));
+	return (char *)ret;
+}
 #endif /* pt-machine.h */
