@@ -3153,8 +3153,8 @@ typedef Elf32_Addr Elf32_Conflict;
 #define R_OR1K_PLT26		15
 #define R_OR1K_GOTOFF_HI16	16
 #define R_OR1K_GOTOFF_LO16	17
-#define R_OR1K_GLOB_DAT		18
-#define R_OR1K_COPY		19
+#define R_OR1K_COPY		18
+#define R_OR1K_GLOB_DAT		19
 #define R_OR1K_JMP_SLOT		20
 #define R_OR1K_RELATIVE		21
 

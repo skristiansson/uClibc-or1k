@@ -46,8 +46,8 @@ static const char * const _dl_reltypes_tab[] =
 		"R_OR1K_PLT26",
 		"R_OR1K_GOTOFF_HI16",
 		"R_OR1K_GOTOFF_LO16",
-		"R_OR1K_GLOB_DAT",
 		"R_OR1K_COPY",
+		"R_OR1K_GLOB_DAT",
 		"R_OR1K_JMP_SLOT",
 		"R_OR1K_RELATIVE",
 	};
