@@ -65,13 +65,22 @@
 	.globl	_start
 	.type	_start,%function
 
-.global _start	
-_start:	
-	/* Clear the frame pointer and link register since this is the
-	 * outermost frame.
-	 */
-	l.add r2,r0,r0
-	l.add r9,r0,r0
+.global _start
+_start:
+
+#ifdef __PIC__
+	/* Obtain a pointer to .got.
+	 * r2 is used as temporary, since it will be cleared later
+	 * in this function */
+	l.jal	.LPC0
+#ifndef __OR1K_NODELAY__
+	l.nop
+#endif
+.LPC0:
+	l.movhi	r2, gotpchi(_GLOBAL_OFFSET_TABLE_+(.-.LPC0))
+	l.ori	r2, r2, gotpclo(_GLOBAL_OFFSET_TABLE_+(.-.LPC0))
+	l.add	r2, r2, r9
+#endif
 
 	/* Push stack limit onto the stack */
 	/* Provides highest stack address to user code (as stack grows
@@ -88,15 +97,24 @@ _start:
 	l.lwz  r4,0(r1)
 	l.addi r5,r1,4
 
+#ifdef __PIC__
+	l.lwz	r3,got(main)(r2)
+#else
 	l.movhi r3,hi(main)
 	l.ori   r3,r3,lo(main)
+#endif
 
 	/* Put the constructor and destructor initialization as args four and
 	   five into r6 and r7 */
+#ifdef __PIC__
+	l.lwz	r6, got(__init)(r2)
+	l.lwz	r7, got(__fini)(r2)
+#else
 	l.movhi	r6,hi(__init)
 	l.ori	r6,r6,lo(__init)
 	l.movhi	r7,hi(__fini)
 	l.ori	r7,r7,lo(__fini)
+#endif
 
 	/* rtld_fini = NULL */
 	l.movhi	r8, 0
@@ -105,8 +123,18 @@ _start:
 	   on the stack. */
 	l.addi  r1,r1,-4
 
+	/* Clear the frame pointer and link register since this is the
+	 * outermost frame.
+	 */
+	l.add r2,r0,r0
+	l.add r9,r0,r0
+
 	/* Let the libc call main and exit with its return code.  */
+#ifdef __PIC__
+	l.j	plt(__uClibc_main)
+#else
 	l.j	__uClibc_main
+#endif
 	 l.nop
 
 /* Define a symbol for the first piece of initialized data.  */
