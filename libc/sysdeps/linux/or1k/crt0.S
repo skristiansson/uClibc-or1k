@@ -69,17 +69,15 @@
 _start:
 
 #ifdef __PIC__
-	/* Obtain a pointer to .got.
-	 * r2 is used as temporary, since it will be cleared later
-	 * in this function */
+	/* Obtain a pointer to .got in r16 */
 	l.jal	.LPC0
 #ifndef __OR1K_NODELAY__
 	l.nop
 #endif
 .LPC0:
-	l.movhi	r2, gotpchi(_GLOBAL_OFFSET_TABLE_+(.-.LPC0))
-	l.ori	r2, r2, gotpclo(_GLOBAL_OFFSET_TABLE_+(.-.LPC0))
-	l.add	r2, r2, r9
+	l.movhi	r16, gotpchi(_GLOBAL_OFFSET_TABLE_+(.-.LPC0))
+	l.ori	r16, r16, gotpclo(_GLOBAL_OFFSET_TABLE_+(.-.LPC0))
+	l.add	r16, r16, r9
 #endif
 
 	/* Push stack limit onto the stack */
@@ -98,7 +96,7 @@ _start:
 	l.addi r5,r1,4
 
 #ifdef __PIC__
-	l.lwz	r3,got(main)(r2)
+	l.lwz	r3,got(main)(r16)
 #else
 	l.movhi r3,hi(main)
 	l.ori   r3,r3,lo(main)
@@ -107,8 +105,8 @@ _start:
 	/* Put the constructor and destructor initialization as args four and
 	   five into r6 and r7 */
 #ifdef __PIC__
-	l.lwz	r6, got(__init)(r2)
-	l.lwz	r7, got(__fini)(r2)
+	l.lwz	r6, got(__init)(r16)
+	l.lwz	r7, got(__fini)(r16)
 #else
 	l.movhi	r6,hi(__init)
 	l.ori	r6,r6,lo(__init)
