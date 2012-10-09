@@ -32,12 +32,36 @@
 #define FP(x...)
 #endif
 
-.globl     __sigsetjmp;
-.type      __sigsetjmp, @function;
-.align  2;        
+.globl _setjmp
+.type _setjmp, @function
+.align 2
 
-__sigsetjmp:   
-#	l.mfspr	r11,r0,SPR_SR                
+_setjmp:
+	l.addi	r4,r0,0			/* Set second argument to 0.  */
+	l.j	.Local_sigsetjmp
+	l.nop
+.size     _setjmp,.-_setjmp
+
+.globl __setjmp
+.type __setjmp, @function
+.align 2
+
+__setjmp:
+	l.addi	r4,r0,1			/* Set second argument to 1.  */
+	l.j	.Local_sigsetjmp
+	l.nop
+.size __setjmp,.-__setjmp
+
+.globl setjmp
+.set setjmp,__setjmp
+
+.globl __sigsetjmp
+.type __sigsetjmp, @function
+.align 2
+
+__sigsetjmp:
+.Local_sigsetjmp:
+#	l.mfspr	r11,r0,SPR_SR
 #	l.sw    (JB_SR*4)(r3),r11
 	l.sw    ((JB_GPRS+0)*4)(r3),r1
 	l.sw    ((JB_GPRS+1)*4)(r3),r2
@@ -72,4 +96,4 @@ __sigsetjmp:
 	l.sw    ((JB_GPRS+30)*4)(r3),r31
 	l.j	__sigjmp_save
 	l.nop
-.size     __sigsetjmp,.-__sigsetjmp
+.size __sigsetjmp,.-__sigsetjmp
